@@ -19,7 +19,8 @@
 #include "ace_global.h"
 #include "ace_types.h"
 
-#include <math.h>
+#include <assert.h>
+#include <stdlib.h>
 
 static void init_knights()
 {
@@ -47,9 +48,10 @@ static void init_knights()
 
 static void init_diagonals()
 {
-	const int bishop_slides[4] = { 9, 7, -7, -9 };
+	const int bishop_slides[4] = { 7, 9, -7, -9 };
 	int i, j, k, index;
 	int r, f;
+	u64 *ray = NULL;
 
 	/* initialize the bishop and diagonal queen movelists */
 	for (i = 0; i < 64; i++) {
@@ -59,6 +61,15 @@ static void init_diagonals()
 			r = rank(index);
 			f = file(index);
 
+			switch (j) {
+				case 0: ray = &ray_topleft[i]; break;
+				case 1: ray = &ray_topright[i]; break;
+				case 2: ray = &ray_bottomright[i]; break;
+				case 3: ray = &ray_bottomleft[i]; break;
+			}
+
+			assert(ray);
+
 			/* slide up to 7 squares in each direction */
 			for (k = 0; k < 7; k++) {
 				index += bishop_slides[j];
@@ -67,6 +78,7 @@ static void init_diagonals()
 				if (is_valid_index(index) &&
 					(abs(r - rank(index)) <= 1) &&
 					(abs(f - file(index)) <= 1)) {
+					(*ray) |= (1ULL << index);
 					bishop_movelist[i] |= (1ULL << index);
 					queen_movelist[i] |= (1ULL << index);
 				} else {
@@ -83,9 +95,10 @@ static void init_diagonals()
 
 static void init_horizvert()
 {
-	const int rook_slides[4] = { 1, 8, -8, -1 };
+	const int rook_slides[4] = { 8, 1, -8, -1 };
 	int i, j, k, index;
 	int r, f;
+	u64 *ray = NULL;
 
 	/* initialize the rook and horiz/vert queen movelists */
 	for (i = 0; i < 64; i++) {
@@ -95,6 +108,15 @@ static void init_horizvert()
 			r = rank(index);
 			f = file(index);
 
+			switch (j) {
+				case 0: ray = &ray_top[i]; break;
+				case 1: ray = &ray_right[i]; break;
+				case 2: ray = &ray_bottom[i]; break;
+				case 3: ray = &ray_left[i]; break;
+			}
+
+			assert(ray);
+
 			/* slide up to 7 squares in each direction */
 			for (k = 0; k < 7; k++) {
 				index += rook_slides[j];
@@ -103,6 +125,7 @@ static void init_horizvert()
 				if (is_valid_index(index) &&
 					(abs(r - rank(index)) <= 1) &&
 					(abs(f - file(index)) <= 1)) {
+					(*ray) |= (1ULL << index);
 					rook_movelist[i] |= (1ULL << index);
 					queen_movelist[i] |= (1ULL << index);
 				} else {
@@ -210,6 +233,15 @@ void init_movelists()
 
 		pawn_capturelist[0][i] = 0ULL;
 		pawn_capturelist[1][i] = 0ULL;
+
+		ray_topleft[i] = 0ULL;
+		ray_top[i] = 0ULL;
+		ray_topright[i] = 0ULL;
+		ray_right[i] = 0ULL;
+		ray_bottomright[i] = 0ULL;
+		ray_bottom[i] = 0ULL;
+		ray_bottomleft[i] = 0ULL;
+		ray_left[i] = 0ULL;
 	}
 
 	pawn_enpas[0] = 0ULL;

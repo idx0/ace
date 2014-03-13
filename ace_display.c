@@ -45,3 +45,34 @@ void print_bboard(const u64 bb)
 
 	printf("   a b c d e f g h\n");
 }
+
+
+void print_board(const board_t* b)
+{
+	int f, r, i;
+	const char pieces[2][6] = {
+		{ 'P', 'N', 'R', 'B', 'Q', 'K' },
+		{ 'p', 'n', 'r', 'b', 'q', 'k' }
+	};
+
+	assert(b);
+
+	for (r = 8; r > 0; r--) {
+		printf(" %d ", r);
+
+		for (f = 0; f < 8; f++) {
+			i = from_rank_file(r - 1, f);
+			assert(is_valid_index(i));
+
+			if (piece_valid(b->squares[i].type)) {
+				printf("%c ", pieces[b->squares[i].color][b->squares[i].type]);
+			} else {
+				printf(". ");
+			}
+		}
+
+		printf("\n");
+	}
+
+	printf("   a b c d e f g h\n");
+}

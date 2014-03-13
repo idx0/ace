@@ -29,7 +29,9 @@
 #endif
 
 /* piece definition: piece type */
-typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING } piece_type_t;
+typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING, INVALID } piece_type_t;
+
+#define piece_valid(x) (((x) >= PAWN) && ((x) < INVALID))
 
 /* piece definition: piece color, also used for side */
 typedef enum piece_color { WHITE = 0, BLACK } piece_color_t;
@@ -94,7 +96,9 @@ typedef struct piece {
 typedef struct board {
 
 	/* bitboard which represents all pieces */
-	u64 piece[2][7];
+	u64 piece[2][6];
+
+	piece_t squares[64];
 
 	/* bitboard which represents all occupied sq for this color */
 	u64 occ[2];

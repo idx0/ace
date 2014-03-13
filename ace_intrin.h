@@ -17,29 +17,7 @@
  */
 #pragma once
 
-#if defined (_WIN64)
-# define ACE_WIN64
-# define ACE_WINDOWS
-# include <intrin.h>
-#elif defined (_WIN32)
-# define ACE_WIN32
-# define ACE_WINDOWS
-# include <intrin.h>
-#elif defined (__APPLE__)
-# define ACE_MAC
-/* Unix is any system that runs *nix software (BSD, Linux, or OSX) */
-# define ACE_UNIX
-#else /* other *MUST* be linux */
-# define ACE_LINUX
-# define ACE_UNIX
-# include <inttypes.h>
-#endif
-
-#undef ACE_BITTEST
-#undef ACE_POPCNT32
-#undef ACE_POPCNT64
-#undef ACE_LSB64
-#undef ACE_MSB64
+#include "ace_defs.h"
 
 #ifdef __clang__
  /* TODO */
@@ -48,6 +26,10 @@
  typedef uint64_t u64;
  typedef uint32_t u32;
  typedef uint16_t u16;
+# define ACE_MSB64(x) ((u32)__builtin_clzll(x))
+# define ACE_LSB64(x) ((u32)__builtin_ctzll(x))
+# define ACE_POPCNT64(x) ((u32)__builtin_popcountll(x))
+# define ACE_POPCNT32(x) ((u32)__builtin_popcount(x))
 #elif defined (__INTEL_COMPILER) || defined (__ICC)
  /* TODO */
 #elif defined (_MSC_VER)
@@ -55,31 +37,28 @@
  typedef unsigned __int64 u64;
  typedef unsigned __int32 u32;
  typedef unsigned __int16 u16;
-# ifdef ACE_WIN64
+# ifdef ACE_X86
 #  pragma intrinsic(_BitScanForward64)
 #  pragma intrinsic(_BitScanReverse64)
-#  pragma intrinsic(_bittest64)
-#  define ACE_BITTEST(a, b) (_bittest64(&(a), (b)))
-   u32 internal_bitScanForward(u64 x)
+   u32 internal_lsb(u64 x)
    {
        unsigned long i;
        _BitScanForward64(&i, x);
        return (u32)i;
    }
-#  define ACE_LSB64(x) (internal_bitScanForward(x))
-   u32 internal_bitScanReverse(u64 x)
+#  define ACE_LSB64(x) (internal_lsb(x))
+   u32 internal_msb(u64 x)
    {
        unsigned long i;
        _BitScanReverse64(&i, x);
        return (u32)i;
    }
-#  define ACE_MSB64(x) (internal_bitScanReverse(x))
+#  define ACE_MSB64(x) (internal_msb(x))
+#  define ACE_POPCNT32(x) (__popcnt(x))
+#  define ACE_POPCNT64(x) (__popcnt64(x))
 # else
 # endif
-# define ACE_POPCNT32(x) (__popcnt(x))
-# define ACE_POPCNT64(x) (__popcnt64(x))
 #else
-# define ACE_BITTEST(a, b) ((a)) & (0x1 << (b)))
 #endif
 
 typedef unsigned char u8;

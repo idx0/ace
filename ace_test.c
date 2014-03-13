@@ -24,11 +24,13 @@ int main(int argc, const char **argv)
 
 	init_movelists();
 
-	print_bboard(pawn_enpas[1]);
+	print_bboard(ray_topleft[C4]);
 
 	fen_init(&fen, sz, strlen(sz));
 
-	print_bboard(fen.board->occ[0] | fen.board->occ[1]);
+	print_board(fen.board);
+
+	printf("%d\n", ACE_MSB64(fen.board->occ[0]));
 
 	fen_destroy(&fen);
 

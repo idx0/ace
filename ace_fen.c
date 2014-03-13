@@ -17,6 +17,7 @@
  */
  
 #include <assert.h>
+#include <string.h>
 
 #include "ace_fen.h"
 
@@ -65,6 +66,7 @@ piece_t from_char(const char c, const board_rank_t rank, const board_file_t file
 	p.pos.p.rank = rank;
 	p.pos.p.file = file;
 	p.color = WHITE;
+	p.type = INVALID;
 
 	/* is c a valid character */
 	switch (c) {
@@ -144,6 +146,7 @@ int parse_rank(fen_state_t *fen, const char *str, size_t len)
 				if (is_valid_index(index)) {
 					fen->board->piece[p.color][p.type] |= (1ULL << index);
 					fen->board->occ[p.color] |= (1ULL << index);
+					fen->board->squares[index] = p;
 				} else {
 					rc = ERROR_FEN_INVALID_MOVE;
 				}
@@ -172,7 +175,7 @@ int parse_rank(fen_state_t *fen, const char *str, size_t len)
 
 int fen_init(fen_state_t *fen, const char *str, size_t len)
 {
-	int rc = FEN_SUCCESS;
+	int i, rc = FEN_SUCCESS;
 
 	assert(fen);
 
@@ -185,6 +188,11 @@ int fen_init(fen_state_t *fen, const char *str, size_t len)
 	assert(fen->board);
 
 	memset(fen->board, 0, sizeof(board_t));
+
+	for (i = 0; i < 64; i++) {
+		fen->board->squares[i].type = INVALID;
+	}
+
 	fen->alloc = TRUE;
 
 	rc = parse_rank(fen, str, len);

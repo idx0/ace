@@ -220,3 +220,6 @@ pip-log.txt
 
 crafty/
 ace_msvc/
+ace
+test
+*.o

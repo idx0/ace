@@ -19,3 +19,4 @@
 #pragma once
 
 extern void print_bboard(const u64 bb);
+extern void print_board(const board_t* b);

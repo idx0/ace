@@ -18,6 +18,9 @@
 
 #include "ace_intrin.h"
 
+/* This file defines global, precomputed bitboards and other values.  We are
+   not concerned with memory here */
+
 /* These bitboard arrays hold all valid move positions for the respective
    piece at the board position given by the array index */
 u64 knight_movelist[64];
@@ -33,5 +36,17 @@ u64 pawn_capturelist[2][64];
 /* This bitboard has a bit set if the relative index in pawn_movelist should
    have an en passant square set */
 u64 pawn_enpas[2];
+/* These bitboards are the "rays" used to move rooks, bishops, and queens.
+   When generating the actual moves these pieces can make, we draw a ray in
+   each direction from the piece and cutoff the ray if it intersects another
+   piece on the board */
+u64 ray_topleft[64];
+u64 ray_top[64];
+u64 ray_topright[64];
+u64 ray_right[64];
+u64 ray_bottomright[64];
+u64 ray_bottom[64];
+u64 ray_bottomleft[64];
+u64 ray_left[64];
 
 extern void init_movelists();
