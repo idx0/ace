@@ -29,9 +29,7 @@
 #endif
 
 /* piece definition: piece type */
-typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING, INVALID } piece_type_t;
-
-#define piece_valid(x) (((x) >= PAWN) && ((x) < INVALID))
+typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING } piece_type_t;
 
 /* piece definition: piece color, also used for side */
 typedef enum piece_color { WHITE = 0, BLACK } piece_color_t;
@@ -72,19 +70,15 @@ struct position {
 #define ASU8(pos) (*(u8*)&(pos))
 
 /* this structure defines a piece, as used by our piece list */
-typedef struct piece {
-	/* union of position structure and u8 */
-	union {
-		struct position p;
-		u8 				u;
-	} pos;
+typedef u8 piece_t;
 
-	/* piece color */
-	piece_color_t color;
+#define piece_type(p)  ((p) & 0x07)
+#define piece_color(p) (((p) & 0x08) >> 3)
+#define set_piece_color(p, c) ((p) = ((p) & 0xf7) | (((c) & 0x01) << 3))
+#define set_piece_type(p, t)  ((p) = ((p) & 0xf8) | ((t) & 0x07))
 
-	/* piece type */
-	piece_type_t  type;
-} piece_t;
+#define INVALID_PIECE	0xff
+#define piece_valid(p) (((p) != INVALID_PIECE) && (piece_type(p) <= KING))
 
 
 #define rank(x) (((x) & 0x38) >> 3)

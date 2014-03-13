@@ -74,7 +74,7 @@ typedef struct fen_state {
 } fen_state_t;
 
 /* returns a struct piece from the given character */
-piece_t from_char(const char c, const board_rank_t rank, const board_file_t file);
+piece_t from_char(const char c);
 
 int parse_rank(fen_state_t *fen, const char *str, size_t len);
 

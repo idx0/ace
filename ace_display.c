@@ -64,8 +64,10 @@ void print_board(const board_t* b)
 			i = from_rank_file(r - 1, f);
 			assert(is_valid_index(i));
 
-			if (piece_valid(b->squares[i].type)) {
-				printf("%c ", pieces[b->squares[i].color][b->squares[i].type]);
+			if (piece_valid(b->squares[i])) {
+				printf("%c ",
+					pieces[piece_color(b->squares[i])]
+						  [piece_type(b->squares[i])]);
 			} else {
 				printf(". ");
 			}

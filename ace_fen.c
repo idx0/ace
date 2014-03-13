@@ -59,47 +59,25 @@ int isblack(const char c)
 }
 
 
-piece_t from_char(const char c, const board_rank_t rank, const board_file_t file)
+piece_t from_char(const char c)
 {
-	piece_t p;
-
-	p.pos.p.rank = rank;
-	p.pos.p.file = file;
-	p.color = WHITE;
-	p.type = INVALID;
+	piece_t p = INVALID_PIECE;
+	set_piece_color(p, WHITE);
 
 	/* is c a valid character */
 	switch (c) {
-		case 'p':	/* fall-through */
-			p.color = BLACK;
-		case 'P':
-			p.type = PAWN;
-			break;
-		case 'n':	/* fall-through */
-			p.color = BLACK;
-		case 'N':
-			p.type = KNIGHT;
-			break;
-		case 'b':	/* fall-through */
-			p.color = BLACK;
-		case 'B':
-			p.type = BISHOP;
-			break;
-		case 'r':	/* fall-through */
-			p.color = BLACK;
-		case 'R':
-			p.type = ROOK;
-			break;
-		case 'q':	/* fall-through */
-			p.color = BLACK;
-		case 'Q':
-			p.type = QUEEN;
-			break;
-		case 'k':	/* fall-through */
-			p.color = BLACK;
-		case 'K':
-			p.type = KING;
-			break;
+		case 'p': set_piece_color(p, BLACK);
+		case 'P': set_piece_type(p, PAWN); break;
+		case 'n': set_piece_color(p, BLACK);
+		case 'N': set_piece_type(p, KNIGHT); break;
+		case 'b': set_piece_color(p, BLACK);
+		case 'B': set_piece_type(p, BISHOP); break;
+		case 'r': set_piece_color(p, BLACK);
+		case 'R': set_piece_type(p, ROOK); break;
+		case 'q': set_piece_color(p, BLACK);
+		case 'Q': set_piece_type(p, QUEEN); break;
+		case 'k': set_piece_color(p, BLACK);
+		case 'K': set_piece_type(p, KING); break;
 		default: break;
 	}
 
@@ -140,12 +118,12 @@ int parse_rank(fen_state_t *fen, const char *str, size_t len)
 				file_cnt += (c - '1');
 			} else if (iswhite(c) || isblack(c)) {
 				/* TODO: add piece */
-				p = from_char(c, 7 - rank_cnt, file_cnt);
-				index = from_rank_file(p.pos.p.rank, p.pos.p.file);
+				p = from_char(c);
+				index = from_rank_file(7 - rank_cnt, file_cnt);
 
 				if (is_valid_index(index)) {
-					fen->board->piece[p.color][p.type] |= (1ULL << index);
-					fen->board->occ[p.color] |= (1ULL << index);
+					fen->board->piece[piece_color(p)][piece_type(p)] |= (1ULL << index);
+					fen->board->occ[piece_color(p)] |= (1ULL << index);
 					fen->board->squares[index] = p;
 				} else {
 					rc = ERROR_FEN_INVALID_MOVE;
@@ -175,7 +153,7 @@ int parse_rank(fen_state_t *fen, const char *str, size_t len)
 
 int fen_init(fen_state_t *fen, const char *str, size_t len)
 {
-	int i, rc = FEN_SUCCESS;
+	int rc = FEN_SUCCESS;
 
 	assert(fen);
 
@@ -188,10 +166,7 @@ int fen_init(fen_state_t *fen, const char *str, size_t len)
 	assert(fen->board);
 
 	memset(fen->board, 0, sizeof(board_t));
-
-	for (i = 0; i < 64; i++) {
-		fen->board->squares[i].type = INVALID;
-	}
+	memset(fen->board->squares, INVALID_PIECE, 64 * sizeof(u8));
 
 	fen->alloc = TRUE;
 
