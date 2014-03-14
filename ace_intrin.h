@@ -21,11 +21,13 @@
 
 #define upper(x) (((x) >> 32) & 0xffffffff)
 #define lower(x) ((x) & 0xffffffff)
+ 
+#define C64(x) (x##ULL)
 
-#ifdef __clang__
-  /* TODO */
-#elif defined (__GNUC__) || defined (__MINGW32__)
+#if defined (__GNUC__)
   /* GCC or Equivalent */
+# define ALIGN64 __attribute__((aligned(64)))
+# define FORCE_INLINE __attribute__((always_inline))
   typedef uint64_t u64;
   typedef uint32_t u32;
   typedef uint16_t u16;
@@ -37,6 +39,8 @@
   /* TODO */
 #elif defined (_MSC_VER)
   /* MSVC */
+# define ALIGN64 __declspec(align(64))
+# define FORCE_INLINE __forceinline
   typedef unsigned __int64 u64;
   typedef unsigned __int32 u32;
   typedef unsigned __int16 u16;
@@ -91,6 +95,8 @@
 # else
 # endif
 #else
+# define FORCE_INLINE inline
+# define ALIGN64
 #endif
 
 typedef unsigned char u8;

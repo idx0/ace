@@ -59,5 +59,8 @@ enum ray_dir { TOPLEFT = 0, NORTHWEST = 0,
 			   LEFT = 7, WEST = 7 } ray_dir_t;
 u64* ray_list[8];
 #define is_positive_ray(rd) ((rd) <= RIGHT)
+/* bitboards representing the outer squares and the inner 6 squares */
+#define outer_squares 0xff818181818181ff
+#define inner_squares 0x007e7e7e7e7e7e00
 
 extern void init_movelists();

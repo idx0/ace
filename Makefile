@@ -5,7 +5,8 @@ OBJS := \
 	ace_fen.o \
 	ace_display.o \
 	ace_init.o \
-	ace_zobrist.o
+	ace_zobrist.o \
+	ace_magic.o 
 
 INCLUDES :=
 

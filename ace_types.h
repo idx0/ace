@@ -28,8 +28,6 @@
 #define FALSE	0
 #endif
 
-#define C64(x) (x##ULL)
-
 /* piece definition: piece type */
 typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING } piece_type_t;
 
