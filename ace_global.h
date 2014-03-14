@@ -48,5 +48,16 @@ u64 ray_bottomright[64];
 u64 ray_bottom[64];
 u64 ray_bottomleft[64];
 u64 ray_left[64];
+/* These variables are used for simplicity */
+enum ray_dir { TOPLEFT = 0, NORTHWEST = 0,
+			   TOP = 1, NORTH = 1,
+			   TOPRIGHT = 2, NORTHEAST = 2,
+			   RIGHT = 3, EAST = 3,
+			   BOTTOMRIGHT = 4, SOUTHEAST = 4,
+			   BOTTOM = 5, SOUTH = 5,
+			   BOTTOMLEFT = 6, SOUTHWEST = 6,
+			   LEFT = 7, WEST = 7 } ray_dir_t;
+u64* ray_list[8];
+#define is_positive_ray(rd) ((rd) <= RIGHT)
 
 extern void init_movelists();

@@ -25,7 +25,8 @@
 static void init_knights()
 {
 	const int knight_moves[8] = { 10, -6, -15, -17, -10, 6, 15, 17 };
-	int i, j, index;
+	int i, j;
+	u8 index;
 	int r, f;
 
 	/* initialize the knight movelist */
@@ -49,7 +50,8 @@ static void init_knights()
 static void init_diagonals()
 {
 	const int bishop_slides[4] = { 7, 9, -7, -9 };
-	int i, j, k, index;
+	int i, j, k;
+	u8 index;
 	int r, f;
 	u64 *ray = NULL;
 
@@ -96,7 +98,8 @@ static void init_diagonals()
 static void init_horizvert()
 {
 	const int rook_slides[4] = { 8, 1, -8, -1 };
-	int i, j, k, index;
+	int i, j, k;
+	u8 index;
 	int r, f;
 	u64 *ray = NULL;
 
@@ -143,7 +146,8 @@ static void init_horizvert()
 static void init_kings()
 {
 	const int king_moves[8] = { -1, 7, 8, 9, 1, -7, -8, -9 };
-	int i, j, index;
+	int i, j;
+	u8 index;
 	int r, f;
 
 	/* initialize the king movelist */
@@ -177,7 +181,8 @@ static void init_pawns()
 
 	const int pawn_captures[2][2] = { { 7, 9 }, { -7, -9 } };
 	const int pawn_moves[2] = { 8, -8 };
-	int i, c, j, index;
+	int i, c, j;
+	u8 index;
 	int r, f;
 
 	for (i = 0; i < 64; i++) {
@@ -252,4 +257,13 @@ void init_movelists()
 	init_horizvert();
 	init_diagonals();
 	init_pawns();
+
+	ray_list[TOPLEFT] = ray_topleft;
+	ray_list[TOP] = ray_top;
+	ray_list[TOPRIGHT] = ray_topright;
+	ray_list[RIGHT] = ray_right;
+	ray_list[BOTTOMRIGHT] = ray_bottomright;
+	ray_list[BOTTOM] = ray_bottom;
+	ray_list[BOTTOMLEFT] = ray_bottomleft;
+	ray_list[LEFT] = ray_left;
 }

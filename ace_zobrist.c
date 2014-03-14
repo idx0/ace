@@ -18,6 +18,31 @@
 
 #include "ace_zobrist.h"
 
+u64 rkiss_rand()
+{
+	const u64 e = rkiss_param[0] - rkiss_rotate(rkiss_param[1], 7);
+
+	rkiss_param[0] = rkiss_param[1] ^ rkiss_rotate(rkiss_param[2], 13);
+	rkiss_param[1] = rkiss_param[2] + rkiss_rotate(rkiss_param[3], 37);
+	rkiss_param[2] = rkiss_param[3] + e;
+
+	return rkiss_param[3] = (e + rkiss_param[0]);
+}
+
+
+void rkiss_seed(const u32 seed)
+{
+	int i;
+
+	rkiss_param[0] = 0xf1ea5eed;
+
+	/* stockfish uses 0xd4e12c77 here */
+	rkiss_param[1] = rkiss_param[2] = rkiss_param[3] = seed;
+
+	for (i = 0; i < 39; i++) rkiss_rand();
+}
+
+
 void init_zobrist(const u32 seed)
 {
 	int i, c;

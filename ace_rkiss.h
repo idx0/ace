@@ -20,32 +20,13 @@
 
 #include "ace_intrin.h"
 
-static u64 rkiss_param[4];
+u64 rkiss_param[4];
 
 /* Bob Jenkin's PRNG based off RNG-Kiss-family
    (http://chessprogramming.wikispaces.com/Bob+Jenkins) */
 
 #define rkiss_rotate(x, k) ((x << k) | (x >> (64 - k)))
 
-static u64 rkiss_rand()
-{
-	const u64 e = rkiss_param[0] - rkiss_rotate(rkiss_param[1], 7);
+extern u64 rkiss_rand();
 
-	rkiss_param[0] = rkiss_param[1] ^ rkiss_rotate(rkiss_param[2], 13);
-	rkiss_param[1] = rkiss_param[2] + rkiss_rotate(rkiss_param[3], 37);
-	rkiss_param[2] = rkiss_param[3] + e;
-
-	return rkiss_param[3] = (e + rkiss_param[0]);
-}
-
-static void rkiss_seed(const u32 seed)
-{
-	int i;
-
-	rkiss_param[0] = 0xf1ea5eed;
-
-	/* stockfish uses 0xd4e12c77 here */
-	rkiss_param[1] = rkiss_param[2] = rkiss_param[3] = seed;
-
-	for (i = 0; i < 39; i++) rkiss_rand();
-}
+extern void rkiss_seed(const u32 seed);

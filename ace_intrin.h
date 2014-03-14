@@ -23,23 +23,23 @@
 #define lower(x) ((x) & 0xffffffff)
 
 #ifdef __clang__
- /* TODO */
+  /* TODO */
 #elif defined (__GNUC__) || defined (__MINGW32__)
- /* GCC or Equivalent */
- typedef uint64_t u64;
- typedef uint32_t u32;
- typedef uint16_t u16;
-# define ACE_MSB64(x) ((u32)__builtin_clzll(x))
+  /* GCC or Equivalent */
+  typedef uint64_t u64;
+  typedef uint32_t u32;
+  typedef uint16_t u16;
+# define ACE_MSB64(x) (63 - (u32)__builtin_clzll(x))
 # define ACE_LSB64(x) ((u32)__builtin_ctzll(x))
 # define ACE_POPCNT64(x) ((u32)__builtin_popcountll(x))
 # define ACE_POPCNT32(x) ((u32)__builtin_popcount(x))
 #elif defined (__INTEL_COMPILER) || defined (__ICC)
- /* TODO */
+  /* TODO */
 #elif defined (_MSC_VER)
- /* MSVC */
- typedef unsigned __int64 u64;
- typedef unsigned __int32 u32;
- typedef unsigned __int16 u16;
+  /* MSVC */
+  typedef unsigned __int64 u64;
+  typedef unsigned __int32 u32;
+  typedef unsigned __int16 u16;
 # ifdef ACE_X86
 #  ifdef ACE_WIN64
 #   pragma intrinsic(_BitScanForward64)

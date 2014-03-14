@@ -55,7 +55,7 @@ typedef enum algebraic {
 	A6, B6, C6, D6, E6, F6, G6, H6,
 	A7, B7, C7, D7, E7, F7, G7, H7,
 	A8, B8, C8, D8, E8, F8, G8, H8,
-	INVALID_MOVE
+	INVALID_SQUARE
 } algebraic_t;
 
 /* side definition: color, this is a redefinition of piece_color for
@@ -88,7 +88,7 @@ typedef u8 piece_t;
 /* rank, file, index conversion macros */
 #define rank(x) (((x) & 0x38) >> 3)
 #define file(x) ((x) & 0x07)
-#define is_valid_index(x) (((x) >= 0) && ((x) <= 63))
+#define is_valid_index(x) ((x) <= 63)
 #define from_rank_file(r, f) ((((r) & 0x07) << 3) | ((f) & 0x07))
 
 /* bittest redefinition */
@@ -134,6 +134,9 @@ typedef struct board {
 	   rule) */
 	u32 plies;
 	u32 moves;
+
+	/* the en passant square */
+	u8 enpas;
 
 	/* side color */
 	side_color_t side;

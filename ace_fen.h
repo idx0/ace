@@ -38,6 +38,10 @@
 #define ERROR_FEN_ILLEGAL_ENPAS		6
 /* the given rank information is incomplete */
 #define ERROR_FEN_INCOMPLETE_RANK	7
+/* the given castling rights are invalid */
+#define ERROR_FEN_INVALID_CASTLE	8
+/* the FEN structure could not allocate needed memory */
+#define ERROR_FEN_MEMORY			16
 
 
 enum fen_parse_state { FEN_RANK_BEGIN = 0, FEN_RANK_END, FEN_SIDE,
@@ -61,6 +65,8 @@ int iswhite(const char c);
 /* returns TRUE if c is a black piece */
 int isblack(const char c);
 
+#define isnumber(c) (isnonzero(c) || iszero(c))
+
 /* this structure is used to keep fen state */
 typedef struct fen_state {
 
@@ -73,19 +79,20 @@ typedef struct fen_state {
 	board_t* board; /* TODO */
 } fen_state_t;
 
-/* returns a struct piece from the given character */
-piece_t from_char(const char c);
-
-int parse_rank(fen_state_t *fen, const char *str, size_t len);
-
 /**
  * Initializes fen and parses a string in Forsyth-Edwards Notation
  * @param fen FEN state structure
+ * @return FEN_SUCCESS if successful, some ERROR_FEN_X if unsuccessful
+ */
+extern int fen_init(fen_state_t *fen);
+
+/**
+ * Parses the given string into the fen structure
  * @param str FEN string text
  * @param len length of fen
  * @return FEN_SUCCESS if successful, some ERROR_FEN_X if unsuccessful
  */
-extern int fen_init(fen_state_t *fen, const char *str, size_t len);
+extern int fen_parse(fen_state_t *fen, const char *str, size_t len);
 
 /**
  * Frees memory allocted in fen

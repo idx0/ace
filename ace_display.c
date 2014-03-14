@@ -24,7 +24,8 @@
 
 void print_bboard(const u64 bb)
 {
-	int f, r, i;
+	int f, r;
+	u8 i;
 
 	for (r = 8; r > 0; r--) {
 		printf(" %d ", r);
@@ -49,7 +50,8 @@ void print_bboard(const u64 bb)
 
 void print_board(const board_t* b)
 {
-	int f, r, i;
+	int f, r;
+	u8 i;
 	const char pieces[2][6] = {
 		{ 'P', 'N', 'R', 'B', 'Q', 'K' },
 		{ 'p', 'n', 'r', 'b', 'q', 'k' }

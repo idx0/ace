@@ -14,18 +14,21 @@ int main(int argc, const char **argv)
 {
 	fen_state_t fen;
 	char sz[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+	char kiwipete[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
 
 	init_zobrist(0xd4e12c77);
 	init_movelists();
 
 	print_bboard(ray_topleft[C4]);
+	printf("\n");
 
+	fen_init(&fen);
 
-	fen_init(&fen, sz, strlen(sz));
+	fen_parse(&fen, kiwipete, strlen(kiwipete));
 
 	print_board(fen.board);
-	printf("%d\n", ACE_POPCNT64(0x0800000000000010));
+	printf("\n%d\n", ACE_MSB64(0x0800000000000010));
 
 	fen_destroy(&fen);
 

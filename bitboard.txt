@@ -42,3 +42,9 @@ We need to make sure:
  - Those moves are 0 <= x <= 63
  - As we slide, we only slide by 1 file and rank at a time
 
+Lookat:
+---
+(http://chessprogramming.wikispaces.com/Classical+Approach) for ray mapping
+attacks
+
+(http://chessprogramming.wikispaces.com/Magic+Bitboards) for faster attacks
