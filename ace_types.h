@@ -28,6 +28,8 @@
 #define FALSE	0
 #endif
 
+#define C64(x) (x##ULL)
+
 /* piece definition: piece type */
 typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING } piece_type_t;
 
@@ -43,6 +45,7 @@ typedef enum board_file { FA = 0, FB, FC, FD, FE, FF, FG, FH } board_file_t;
 /* side definition: castling permissions (king-side versus queen-side) */
 typedef enum side_castle { WK = 1, WQ = 2, BK = 4, BQ = 8 } side_castle_t;
 
+/* algebraic move notation enumeration */
 typedef enum algebraic {
 	A1, B1, C1, D1, E1, F1, G1, H1,
 	A2, B2, C2, D2, E2, F2, G2, H2,
@@ -72,21 +75,51 @@ struct position {
 /* this structure defines a piece, as used by our piece list */
 typedef u8 piece_t;
 
+/* piece setting and getting macros */
 #define piece_type(p)  ((p) & 0x07)
 #define piece_color(p) (((p) & 0x08) >> 3)
 #define set_piece_color(p, c) ((p) = ((p) & 0xf7) | (((c) & 0x01) << 3))
 #define set_piece_type(p, t)  ((p) = ((p) & 0xf8) | ((t) & 0x07))
 
+/* piece checking macros */
 #define INVALID_PIECE	0xff
 #define piece_valid(p) (((p) != INVALID_PIECE) && (piece_type(p) <= KING))
 
-
+/* rank, file, index conversion macros */
 #define rank(x) (((x) & 0x38) >> 3)
 #define file(x) ((x) & 0x07)
 #define is_valid_index(x) (((x) >= 0) && ((x) <= 63))
 #define from_rank_file(r, f) ((((r) & 0x07) << 3) | ((f) & 0x07))
-#define set(a, b) ((a) & (1ULL << (b)))
 
+/* bittest redefinition */
+#define set(a, b) ((a) & (C64(1) << (b)))
+
+/* move definitions */
+typedef u16 move_t;
+typedef u32 move_ext_t;
+
+/* the move kind is stored in the upper 4 bits of the u16 */
+enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
+				 CAPTURE, EP_CAPTURE, KNIGHT_PROMO, BISHOP_PROMO,
+				 ROOK_PROMO, QUEEN_PROMO, KNIGHT_PROMO_CAP,
+				 BISHOP_PROMO_CAP, ROOK_PROMO_CAP, QUEEN_PROMO_CAP } move_kind_t;
+
+/* from, to, kind */
+#define from(m) ((m) & 0x003f)
+#define to(m)   (((m) & 0x0fc0) >> 6)
+#define kind(m) (((m) & 0xf000) >> 12)
+
+/* these macros return a bitboard with all bits set above and below the given bit */
+#define upper_bits(x) (C64(~1) << x)
+#define lower_bits(x) ((C64(1) << x) - 1)
+
+/* these macros return the LS1B bitboard */
+#define ls1b(x) 	  ((x) & -(x))
+#define ls1b_above(x) ((x) ^ -(x))
+#define ls1b_below(x) (~(x) & ((x) - 1))
+#define ls1b_with(x)  ((x) ^ ((x) - 1))
+
+/* board structure */
 typedef struct board {
 
 	/* bitboard which represents all pieces */

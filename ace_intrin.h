@@ -19,6 +19,9 @@
 
 #include "ace_defs.h"
 
+#define upper(x) (((x) >> 32) & 0xffffffff)
+#define lower(x) ((x) & 0xffffffff)
+
 #ifdef __clang__
  /* TODO */
 #elif defined (__GNUC__) || defined (__MINGW32__)
@@ -38,24 +41,53 @@
  typedef unsigned __int32 u32;
  typedef unsigned __int16 u16;
 # ifdef ACE_X86
-#  pragma intrinsic(_BitScanForward64)
-#  pragma intrinsic(_BitScanReverse64)
-   u32 internal_lsb(u64 x)
-   {
-       unsigned long i;
-       _BitScanForward64(&i, x);
-       return (u32)i;
-   }
-#  define ACE_LSB64(x) (internal_lsb(x))
-   u32 internal_msb(u64 x)
-   {
-       unsigned long i;
-       _BitScanReverse64(&i, x);
-       return (u32)i;
-   }
-#  define ACE_MSB64(x) (internal_msb(x))
+#  ifdef ACE_WIN64
+#   pragma intrinsic(_BitScanForward64)
+#   pragma intrinsic(_BitScanReverse64)
+    static u32 internal_lsb(u64 x)
+    {
+        unsigned long i;
+        _BitScanForward64(&i, x);
+        return (u32)i;
+    }
+#   define ACE_LSB64(x) (internal_lsb(x))
+    static u32 internal_msb(u64 x)
+    {
+        unsigned long i;
+        _BitScanReverse64(&i, x);
+        return (u32)i;
+    }
+#   define ACE_MSB64(x) (internal_msb(x))
+#   define ACE_POPCNT64(x) (__popcnt64(x))
+#  else
+#   pragma intrinsic(_BitScanForward)
+#   pragma intrinsic(_BitScanReverse)
+    static u32 internal_popcount64(u64 x)
+    {
+        return __popcnt((u32)upper(x)) + __popcnt((u32)lower(x));
+    }
+#   define ACE_POPCNT64(x) (internal_popcount64(x))
+    static u32 internal_lsb(u64 x)
+    {
+        unsigned long i;
+        if (!_BitScanForward(&i, (u32)lower(x)))
+            if (_BitScanForward(&i, (u32)upper(x))) i += 32;
+
+        return i;
+    }
+#   define ACE_LSB64(x) (internal_lsb(x))
+    static u32 internal_msb(u64 x)
+    {
+        unsigned long i;
+        if (_BitScanReverse(&i, (u32)upper(x)))
+            i += 32;
+        else
+            _BitScanReverse(&i, (u32)lower(x));
+        return i;
+    }
+#   define ACE_MSB64(x) (internal_msb(x))
+#  endif
 #  define ACE_POPCNT32(x) (__popcnt(x))
-#  define ACE_POPCNT64(x) (__popcnt64(x))
 # else
 # endif
 #else
