@@ -365,7 +365,7 @@ void init_magic()
 			temp ^= bit;
 		}
 
-		for(temp=0;temp<(((u64)(1))<<numsquares);temp++)
+		for(temp = 0; temp < (((u64)(1)) << numsquares); temp++)
 		{
 			u64 tempocc = initmagicmoves_occ(squares, numsquares, temp);
 			RmagicNOMASK2(i, tempocc) = initmagicmoves_Rmoves(i, tempocc);

@@ -31,4 +31,4 @@ The board is represented using a bitboard.  I bitboard is a 64-bit unsigned inte
 
 I keep both a list of pieces at each index (packed into the lower 4 bytes of and unsigned char) and a set of bitboards representing pieces by color.
 
-Moves are generated using a set of precomputed movelists and ray vectors.  Movelists can be AND'd with an occupancy bitboard to generate captures or moves for pawns, knights, and kings.  For rooks, bishops, or queens, the moves are generated using rays cast from the from position in a precomputed direction until a collision occurs.
+Moves are generated using a set of precomputed movelists and magic tables.  Movelists can be AND'd with an occupancy bitboard to generate captures or moves for pawns, knights, and kings.  For rooks, bishops, or queens, the moves are generated from a precomputed magic table by using a hashing method.  The implementation of the magic table comes from Pradyumna Kannan.  A paper about the technique can be [read at his website](http://www.pradu.us/old/Nov27_2008/Buzz/research/magic/Bitboards.pdf).
