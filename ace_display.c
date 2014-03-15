@@ -88,7 +88,7 @@ void print_algebraic(const board_t* b, const move_t move)
 	u32 to = move_to(move);
 	u32 from = move_from(move);
 	u8 kind = move_kind(move);
-	piece_t capture, piece;
+	piece_t piece;
 	const char pieces[2][6] = {
 		{ 'P', 'N', 'R', 'B', 'Q', 'K' },
 		{ 'p', 'n', 'r', 'b', 'q', 'k' }
@@ -98,26 +98,28 @@ void print_algebraic(const board_t* b, const move_t move)
 
 	assert(b);
 
-	capture = b->squares[to];
 	piece = b->squares[from];
 
 	if (kind == CAPTURE) {
 		if (piece_type(piece) == PAWN) {
-			printf("%cx%c%c", file(from), file(to), rank(to));
+			printf("%cx%c%c", files[file(from)], files[file(to)], ranks[rank(to)]);
 		} else {
-			printf("%cx%c%c", pieces[piece_color(piece)], file(to), rank(to));
+			printf("%cx%c%c", pieces[piece_color(piece)][piece_type(piece)],
+				files[file(to)], ranks[rank(to)]);
 		}
 	} else if (kind == EP_CAPTURE) {
 		assert(piece_type(piece) == PAWN);
-		printf("%cx%c%ce.p.", file(from), file(to), rank(to));
+		printf("%cx%c%ce.p.", files[file(from)], files[file(to)], ranks[rank(to)]);
 	} else if (is_promotion(kind)) {
 		assert(piece_type(piece) == PAWN);
-		printf("%c%c%c", file(to), rank(to), pieces[promoted_type[kind & 0x03]]);
+		printf("%c%c%c", files[file(to)], ranks[rank(to)],
+			pieces[piece_color(piece)][promoted_type[kind & 0x03]]);
 	} else {
 		if (piece_type(piece) == PAWN) {
-			printf("%c%c", file(to), rank(to));
+			printf("%c%c", files[file(to)], ranks[rank(to)]);
 		} else {
-			printf("%c%c%c", pieces[piece_color(piece)], file(to), rank(to));
+			printf("%c%c%c", pieces[piece_color(piece)][piece_type(piece)],
+				files[file(to)], ranks[rank(to)]);
 		}
 	}
 }

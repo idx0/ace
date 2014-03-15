@@ -82,7 +82,9 @@ static void init_diagonals()
 	int i, j, k;
 	u8 index;
 	int r, f;
+#ifdef CALCULATE_RAYS
 	u64 *ray = NULL;
+#endif
 
 	/* initialize the bishop and diagonal queen movelists */
 	for (i = 0; i < 64; i++) {
@@ -134,7 +136,9 @@ static void init_horizvert()
 	int i, j, k;
 	u8 index;
 	int r, f;
+#ifdef CALCULATE_RAYS
 	u64 *ray = NULL;
+#endif
 
 	/* initialize the rook and horiz/vert queen movelists */
 	for (i = 0; i < 64; i++) {
@@ -361,7 +365,7 @@ u64 get_interval(const ms_time_t *then, const ms_time_t* now)
 #ifdef ACE_WINDOWS
 	return (now->time - then->time);
 #else
-	return ((now.tv_sec - then.tv_sec) * 1000) +
-			((now.tv_usec - then.tv_usec) / 1000);
+	return ((now->time.tv_sec - then->time.tv_sec) * 1000) +
+			((now->time.tv_usec - then->time.tv_usec) / 1000);
 #endif
 }

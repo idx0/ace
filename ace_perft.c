@@ -17,6 +17,8 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+
 #include "ace_global.h"
 #include "ace_types.h"
 #include "ace_fen.h"
@@ -73,7 +75,7 @@ void pertf_runtests()
 	printf("WARNING: DEBUG PRINTING IS ON!\n");
 #endif
 
-	fp = fopen("F:\\Users\\Code\\ace\\perftsuite.epd", "r");
+	fp = fopen(PERFT_TESTFILE, "r");
 
 	fen_init(&fen);
 

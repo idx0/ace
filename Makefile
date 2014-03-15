@@ -1,12 +1,14 @@
 CC := gcc
-CFLAGS := -Wall -Wextra
+CFLAGS := -Wall -Wunused -Wuninitialized -Wno-format -std=c99
 
 OBJS := \
 	ace_fen.o \
 	ace_display.o \
 	ace_init.o \
 	ace_zobrist.o \
-	ace_magic.o 
+	ace_magic.o \
+	ace_move.o \
+	ace_perft.o
 
 INCLUDES :=
 
@@ -24,7 +26,7 @@ TEST_OBJ := ace_test.o
 ace_test.o: ace_test.c
 	$(CC) $(CFLAGS) -D_DEBUG -c -o $@ $<
 
-all: CFLAGS += -O2
+all: CFLAGS += -O3 -DNDEBUG
 all: $(MAIN_OBJ) $(OBJS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(MAIN_OBJ) $(LIBS)
 

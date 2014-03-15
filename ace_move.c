@@ -68,13 +68,11 @@ static void add_special_move(const u64 bboard, const u32 from, movelist_t *ml, u
 
 u64 attacking(const board_t* board, const side_color_t s)
 {
-	side_color_t oc;
 	u64 pieces, occ, friendly, ret = 0ULL;
 	u32 i;
 
 	assert(board);
 
-	oc = (~s & 0x01);
 	occ = (board->occ[WHITE] | board->occ[BLACK]);
 	friendly = ~board->occ[s];
 
@@ -453,10 +451,8 @@ int do_move(board_t* board, undolist_t* ul, const move_t move)
 	u32 from = move_from(move);
 	u32 to = move_to(move);
 	u8 kind = move_kind(move);
-	u64 tobb = (1ULL << to);
-	u64 frombb = (1ULL << from);
 	side_color_t oc, s;
-	piece_t promo;
+	piece_t promo = INVALID_PIECE;
 	u64 opp;
 
 	assert(is_valid_index(from));
@@ -553,7 +549,6 @@ void undo_move(board_t* board, undolist_t* ul)
 
 	u32 from, to;
 	u8 kind;
-	u64 tobb, frombb;
 	side_color_t s, oc;
 
 	assert(board);
@@ -570,8 +565,6 @@ void undo_move(board_t* board, undolist_t* ul)
 	assert(is_valid_index(from));
 	assert(is_valid_index(to));
 
-	frombb = (1ULL << from);
-	tobb = (1ULL << to);
 	s = board->side;
 	oc = (~board->side & 0x01);
 
