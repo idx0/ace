@@ -30,6 +30,8 @@ u64 hash_rooks[2][64];
 u64 hash_bishops[2][64];
 u64 hash_queens[2][64];
 u64 hash_kings[2][64];
+/* pointers for ease of use */
+u64* hash_piece[2][6];
 /* hash of side (xor'd if side is black) */
 u64 hash_side;
 /* hash of castling permissions - there are 4 castling permissions but we will

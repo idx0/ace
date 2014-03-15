@@ -21,6 +21,8 @@
 #include <stdio.h>
 
 #include "ace_fen.h"
+#include "ace_global.h"
+#include "ace_zobrist.h"
 
 int isrank(const char c)
 {
@@ -141,9 +143,7 @@ static int parse_rank(fen_state_t *fen, const char *str, size_t len)
 				index = from_rank_file(7 - rank_cnt, file_cnt);
 
 				if (is_valid_index(index)) {
-					fen->board->piece[piece_color(p)][piece_type(p)] |= (1ULL << index);
-					fen->board->occ[piece_color(p)] |= (1ULL << index);
-					fen->board->squares[index] = p;
+					add_piece(fen->board, index, p);
 				} else {
 					rc = ERROR_FEN_INVALID_MOVE;
 				}
@@ -190,6 +190,8 @@ static int parse_side(fen_state_t *fen, const char *str, size_t len)
 		} else if (c == 'b') {
 			fen->board->side = BLACK;
 			readcolor = TRUE;
+
+			fen->board->key ^= hash_side;
 		}
 
 		fen->read_pos++;
@@ -214,6 +216,7 @@ static int parse_castle(fen_state_t *fen, const char *str, size_t len)
 		if (c == TERM) {
 			if (fen->board->castle <= 0x0f) {
 				castval = TRUE;
+				fen->board->key ^= hash_castle[fen->board->castle];
 			} else {
 				rc = ERROR_FEN_INVALID_CASTLE;
 			}
@@ -236,6 +239,7 @@ static int parse_castle(fen_state_t *fen, const char *str, size_t len)
 		} else if (c == '-') {
 			/* no castling */
 			fen->board->castle = 0;
+			fen->board->key ^= hash_castle[0];
 			castval = TRUE;
 		} else {
 			rc = ERROR_FEN_INVALID_CHAR;
@@ -280,6 +284,7 @@ static int parse_enpas(fen_state_t *fen, const char *str, size_t len)
 		} else if ((c == '3') || (c == '6')) {
 			fen->board->enpas = from_rank_file((c - '0'),
 											   file(fen->board->enpas));
+			fen->board->key ^= hash_enpas[file(fen->board->enpas)];
 			readep = TRUE;
 		} else {
 			rc = ERROR_FEN_ILLEGAL_ENPAS;

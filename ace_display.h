@@ -18,5 +18,8 @@
 
 #pragma once
 
+#include "ace_types.h"
+
 extern void print_bboard(const u64 bb);
 extern void print_board(const board_t* b);
+extern void print_algebraic(const board_t* b, const move_t move);

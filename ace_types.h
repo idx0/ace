@@ -28,6 +28,22 @@
 #define FALSE	0
 #endif
 
+#ifdef ACE_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+typedef struct ms_time {
+	u64 time;
+} ms_time_t;
+#else
+#include <sys/time.h>
+typedef struct ms_time {
+	struct timeval time;
+} ms_time_t;
+#endif
+
+extern void get_current_tick(ms_time_t* t);
+extern u64 get_interval(const ms_time_t *then, const ms_time_t* now);
+
 /* piece definition: piece type */
 typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING } piece_type_t;
 
@@ -98,14 +114,17 @@ typedef u32 move_ext_t;
 
 /* the move kind is stored in the upper 4 bits of the u16 */
 enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
-				 CAPTURE, EP_CAPTURE, KNIGHT_PROMO, BISHOP_PROMO,
+				 CAPTURE, EP_CAPTURE, KNIGHT_PROMO = 8, BISHOP_PROMO,
 				 ROOK_PROMO, QUEEN_PROMO, KNIGHT_PROMO_CAP,
 				 BISHOP_PROMO_CAP, ROOK_PROMO_CAP, QUEEN_PROMO_CAP } move_kind_t;
 
 /* from, to, kind */
-#define from(m) ((m) & 0x003f)
-#define to(m)   (((m) & 0x0fc0) >> 6)
-#define kind(m) (((m) & 0xf000) >> 12)
+#define move_from(m) ((m) & 0x003f)
+#define move_to(m)   (((m) & 0x0fc0) >> 6)
+#define move_kind(m) (((m) & 0xf000) >> 12)
+
+#define is_promotion(m) (move_kind(m) & 0x08)
+#define to_move(f, t, k) (((f) & 0x3f) | (((t) & 0x3f) << 6) | (((k) & 0x0f) << 12))
 
 /* these macros return a bitboard with all bits set above and below the given bit */
 #define upper_bits(x) (C64(~1) << x)
@@ -116,6 +135,31 @@ enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
 #define ls1b_above(x) ((x) ^ -(x))
 #define ls1b_below(x) (~(x) & ((x) - 1))
 #define ls1b_with(x)  ((x) ^ ((x) - 1))
+
+#define MAX_MOVES 256
+#define MAX_HISTORY 2048
+
+/* move list */
+typedef struct movelist {
+	move_t moves[MAX_MOVES];
+	u16 count;
+} movelist_t;
+
+/* undo record */
+typedef struct undo_record {
+	move_t move;		/* the move made */
+	u8 castle;			/* castling permissions prior to move */
+	u8 enpas;			/* en passant square prior to move */
+	u32 plies;			/* fifty move count prior to move */
+	piece_t capture;	/* piece captured by move */
+	u64 key;			/* hash key of board prior to move */
+} undo_record_t;
+
+/* undo list */
+typedef struct undolist {
+	undo_record_t undo[MAX_HISTORY];
+	u32 count;
+} undolist_t;
 
 /* board structure */
 typedef struct board {
@@ -133,6 +177,9 @@ typedef struct board {
 	u32 plies;
 	u32 moves;
 
+	/* half move count of current search */
+	u32 search_ply;
+
 	/* the en passant square */
 	u8 enpas;
 
@@ -141,4 +188,7 @@ typedef struct board {
 
 	/* side castling permissions as a bit mask */
 	u8 castle;
+
+	/* zobrist hash key */
+	u64 key;
 } board_t;

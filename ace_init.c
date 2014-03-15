@@ -22,6 +22,35 @@
 #include <assert.h>
 #include <stdlib.h>
 
+u32 bitscan_8bit[256] = {
+	0, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3,
+	0, 1, 0, 2, 0, 1, 0, 5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0,
+	1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1,
+	0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5, 0, 1, 0,
+	2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2,
+	0, 1, 0, 7, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0,
+	1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1,
+	0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 6, 0, 1, 0, 2, 0, 1, 0,
+	3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0,
+	1, 0, 2, 0, 1, 0
+};
+
+u8 castle_permission[64] = {
+	13, 15, 15, 15, 12, 15, 15, 14,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	 7, 15, 15, 15,  3, 15, 15, 11
+};
+
+board_rank_t pawn_enpas_rank[2] = { R3, R6 };
+board_rank_t pawn_double_rank[2] = { R4, R5 };
+piece_type_t promoted_type[4] = { KNIGHT, BISHOP, ROOK, QUEEN };
+
 static void init_knights()
 {
 	const int knight_moves[8] = { 10, -6, -15, -17, -10, 6, 15, 17 };
@@ -63,14 +92,16 @@ static void init_diagonals()
 			r = rank(index);
 			f = file(index);
 
+#ifdef CALCULATE_RAYS
 			switch (j) {
-				case 0: ray = &ray_topleft[i]; break;
-				case 1: ray = &ray_topright[i]; break;
-				case 2: ray = &ray_bottomright[i]; break;
-				case 3: ray = &ray_bottomleft[i]; break;
+				case 0: ray = &ray_top[i]; break;
+				case 1: ray = &ray_right[i]; break;
+				case 2: ray = &ray_bottom[i]; break;
+				case 3: ray = &ray_left[i]; break;
 			}
 
 			assert(ray);
+#endif
 
 			/* slide up to 7 squares in each direction */
 			for (k = 0; k < 7; k++) {
@@ -80,7 +111,9 @@ static void init_diagonals()
 				if (is_valid_index(index) &&
 					(abs(r - rank(index)) <= 1) &&
 					(abs(f - file(index)) <= 1)) {
+#ifdef CALCULATE_RAYS
 					(*ray) |= (1ULL << index);
+#endif
 					bishop_movelist[i] |= (1ULL << index);
 					queen_movelist[i] |= (1ULL << index);
 				} else {
@@ -111,6 +144,7 @@ static void init_horizvert()
 			r = rank(index);
 			f = file(index);
 
+#ifdef CALCULATE_RAYS
 			switch (j) {
 				case 0: ray = &ray_top[i]; break;
 				case 1: ray = &ray_right[i]; break;
@@ -119,6 +153,7 @@ static void init_horizvert()
 			}
 
 			assert(ray);
+#endif
 
 			/* slide up to 7 squares in each direction */
 			for (k = 0; k < 7; k++) {
@@ -128,7 +163,9 @@ static void init_horizvert()
 				if (is_valid_index(index) &&
 					(abs(r - rank(index)) <= 1) &&
 					(abs(f - file(index)) <= 1)) {
+#ifdef CALCULATE_RAYS
 					(*ray) |= (1ULL << index);
+#endif
 					rook_movelist[i] |= (1ULL << index);
 					queen_movelist[i] |= (1ULL << index);
 				} else {
@@ -168,6 +205,40 @@ static void init_kings()
 }
 
 
+static void init_castling()
+{
+	/* [WHITE/BLACK][KINGSIDE/QUEENSIDE] */
+	castle_movelist[WK] = (1ULL << G1);
+	castle_movelist[WQ] = (1ULL << C1);
+	castle_movelist[BK] = (1ULL << G8);
+	castle_movelist[BQ] = (1ULL << C8);
+
+	castle_unocc[WK] = 0x0000000000000060ULL;
+	castle_unocc[WQ] = 0x000000000000000eULL;
+	castle_unocc[BK] = 0x6000000000000000ULL;
+	castle_unocc[BQ] = 0x0e00000000000000ULL;
+
+	castle_ray[WK] = 0x0000000000000060ULL;
+	castle_ray[WQ] = 0x000000000000000cULL;
+	castle_ray[BK] = 0x6000000000000000ULL;
+	castle_ray[BQ] = 0x0c00000000000000ULL;
+
+	castle_side[WK] = KING_CASTLE;
+	castle_side[WQ] = QUEEN_CASTLE;
+	castle_side[BK] = KING_CASTLE;
+	castle_side[BQ] = QUEEN_CASTLE;
+
+	castle_rook_from[C1] = A1;
+	castle_rook_to[C1] = D1;
+	castle_rook_from[C8] = A8;
+	castle_rook_to[C8] = D8;
+	castle_rook_from[G1] = H1;
+	castle_rook_to[G1] = F1;
+	castle_rook_from[G8] = H8;
+	castle_rook_to[G8] = F8;
+}
+
+
 static void init_pawns()
 {
 	/* pawns can move 1 direction forward with the following exceptions:
@@ -193,18 +264,11 @@ static void init_pawns()
 			/* moves */
 			index = i + pawn_moves[c];
 
+			if ((c == WHITE) && (rank(i) == R1)) continue;
+			if ((c == BLACK) && (rank(i) == R8)) continue;
+
 			if (is_valid_index(index)) {
 				pawn_movelist[c][i] |= (1ULL << index);
-
-				if ((c == 0) && (r == R2)) {
-					pawn_movelist[c][i] |= (1ULL << (index + pawn_moves[c]));
-					pawn_enpas[c] |= (1ULL << i);
-				}
-
-				if ((c == 1) && (r == R7)) {
-					pawn_movelist[c][i] |= (1ULL << (index + pawn_moves[c]));
-					pawn_enpas[c] |= (1ULL << i);
-				}
 			}
 
 			/* captures */
@@ -218,6 +282,16 @@ static void init_pawns()
 				}
 			}
 		}
+	}
+
+	pawn_enpas[0] = 0x0000000000ff0000ULL;
+	pawn_enpas[1] = 0x0000ff0000000000ULL;
+	pawn_promotion[0] = 0xff00000000000000ULL;
+	pawn_promotion[1] = 0x00000000000000ffULL;
+
+	for (i = 0; i < 8; i++) {
+		pawn_enpas_move[WHITE][i] = (1ULL << from_rank_file(R4, i));
+		pawn_enpas_move[BLACK][i] = (1ULL << from_rank_file(R5, i));
 	}
 }
 
@@ -239,31 +313,55 @@ void init_movelists()
 		pawn_capturelist[0][i] = 0ULL;
 		pawn_capturelist[1][i] = 0ULL;
 
-		ray_topleft[i] = 0ULL;
-		ray_top[i] = 0ULL;
-		ray_topright[i] = 0ULL;
-		ray_right[i] = 0ULL;
-		ray_bottomright[i] = 0ULL;
-		ray_bottom[i] = 0ULL;
-		ray_bottomleft[i] = 0ULL;
-		ray_left[i] = 0ULL;
+		castle_rook_to[i] = INVALID_SQUARE;
+		castle_rook_from[i] = INVALID_SQUARE;
 	}
 
 	pawn_enpas[0] = 0ULL;
 	pawn_enpas[1] = 0ULL;
+	pawn_promotion[0] = 0ULL;
+	pawn_promotion[1] = 0ULL;
+
+	for (i = 0; i < 8; i++) {
+		pawn_enpas_move[0][i] = 0ULL;
+		pawn_enpas_move[1][i] = 0ULL;
+	}
+
+	for (i = 0; i < 16; i++) {
+		castle_movelist[i] = 0ULL;
+		castle_unocc[i] = 0ULL;
+		castle_ray[i] = 0ULL;
+		castle_side[i] = 0;
+	}
 
 	init_knights();
 	init_kings();
 	init_horizvert();
 	init_diagonals();
 	init_pawns();
+	init_castling();
+}
 
-	ray_list[TOPLEFT] = ray_topleft;
-	ray_list[TOP] = ray_top;
-	ray_list[TOPRIGHT] = ray_topright;
-	ray_list[RIGHT] = ray_right;
-	ray_list[BOTTOMRIGHT] = ray_bottomright;
-	ray_list[BOTTOM] = ray_bottom;
-	ray_list[BOTTOMLEFT] = ray_bottomleft;
-	ray_list[LEFT] = ray_left;
+
+void get_current_tick(ms_time_t* t)
+{
+	assert(t);
+#ifdef ACE_WINDOWS
+	t->time = GetTickCount64();
+#else
+	gettimeofday(&t->time, NULL);
+#endif
+}
+
+
+u64 get_interval(const ms_time_t *then, const ms_time_t* now)
+{
+	assert(then);
+	assert(now);
+#ifdef ACE_WINDOWS
+	return (now->time - then->time);
+#else
+	return ((now.tv_sec - then.tv_sec) * 1000) +
+			((now.tv_usec - then.tv_usec) / 1000);
+#endif
 }

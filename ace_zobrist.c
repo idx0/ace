@@ -17,6 +17,7 @@
  */
 
 #include "ace_zobrist.h"
+#include "ace_types.h"
 
 u64 rkiss_rand()
 {
@@ -59,6 +60,13 @@ void init_zobrist(const u32 seed)
 			hash_queens[c][i] = rkiss_rand();
 			hash_kings[c][i] = rkiss_rand();
 		}
+
+		hash_piece[c][PAWN] = hash_pawns[c];
+		hash_piece[c][KNIGHT] = hash_knights[c];
+		hash_piece[c][ROOK] = hash_rooks[c];
+		hash_piece[c][BISHOP] = hash_bishops[c];
+		hash_piece[c][QUEEN] = hash_queens[c];
+		hash_piece[c][KING] = hash_kings[c];
 	}
 
 	hash_side = rkiss_rand();
