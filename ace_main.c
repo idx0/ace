@@ -62,6 +62,8 @@ int main2(int argc, char **argv)
 	init_magic();
 	init_movelists();
 
+	perft_kiwipete();
+	printf("-----\n");
 	pertf_runtests();
 
 	return 0;

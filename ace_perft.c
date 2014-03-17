@@ -32,7 +32,6 @@
 
 void perft_kiwipete()
 {
-	char sz[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 	u32 i;
 	u64 nodes;
 	fen_state_t fen;
@@ -42,7 +41,7 @@ void perft_kiwipete()
 	u64 d[5] = { 48, 2039, 97862, 4085603, 193690690 };
 
 	fen_init(&fen);
-	fen_parse(&fen, sz, strlen(sz));
+	fen_parse(&fen, FEN_KIWIPETE, strlen(FEN_KIWIPETE));
 
 	for (i = 0; i < 5; i++) {
 		ul.count = 0;

@@ -1,0 +1,25 @@
+Evaluation:
+-----
+ - Piece-Square tables, perhaps derived from analysis of real games.  Should
+   have opening, midgame, lategame code.
+ - Isolated & Passed pawns
+ - Deep pawn evaluation (check for pawns which are deep across the board)
+ - Material & Mobility
+ - Pawn Hash table
+ - King safety
+ - Bishop/Knigh/Rook Pairs
+ - Material draw & endgame
+ - Baysian statistics???
+
+Move Ordering:
+- MVV-LVA
+- SEE
+
+Search:
+ - Alpha-beta search
+ - PV Tables
+ - Transposition tables
+ - Quiescent search
+ - Null-move forward pruning
+ - Search extensions
+ - Iterative deepending & aspiration windows

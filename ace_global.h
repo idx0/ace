@@ -24,6 +24,8 @@
    not concerned with memory here */
 
 extern u32 bitscan_8bit[256];
+/* this bitboard has a 1 set if the board color for that square is "dark" */
+extern u64 board_colors;
 /* These bitboard arrays hold all valid move positions for the respective
    piece at the board position given by the array index */
 u64 knight_movelist[64];
@@ -60,6 +62,21 @@ extern u8 castle_permission[64];
 extern board_rank_t pawn_enpas_rank[2]; 
 extern board_rank_t pawn_double_rank[2];
 extern piece_type_t promoted_type[4];
+extern int piece_material_values[6];
+/* piece-square tables */
+extern int pawn_pcsq[64];
+extern int knight_pcsq[64];
+extern int bishop_pcsq[64];
+extern int rook_pcsq[64];
+extern int queen_pcsq[64];
+extern int king_pcsq[64];
+extern int king_endgame_pcsq[64];
+/* pawn isolation and passing tables */
+extern int pawn_passed[2][64];
+extern int pawn_isolated[64];
+extern int pawn_score_isolated;
+extern int pawn_score_passed[8];
+extern int pawn_score_backward[8];
 #ifdef CALCULATE_RAYS
 /* These bitboards are the "rays" used to move rooks, bishops, and queens.
    When generating the actual moves these pieces can make, we draw a ray in
@@ -156,6 +173,14 @@ extern int do_move(board_t* board, undolist_t* ul, const move_t move);
 extern void undo_move(board_t* board, undolist_t* ul);
 
 /**
+ * These two functions perform and revert NULL moves
+ * @param board The board structure
+ * @param ul The undolist history for this match
+ */
+extern void do_null_move(board_t* board, undolist_t* ul);
+extern void undo_null_move(board_t* board, undolist_t* ul);
+
+/**
  * Performs a perft test to the given depth
  * @param board The board structure
  * @param ul The undolist history for this match
@@ -165,3 +190,25 @@ extern void undo_move(board_t* board, undolist_t* ul);
 extern u64 perft(board_t* board, undolist_t* ul, int depth);
 extern void perft_kiwipete();
 extern void pertf_runtests();
+
+/**
+ * Processes a move in algebraic notation from user input
+ * @param board The board structure
+ * @param sz The input string
+ * @param len The length of the input string
+ * @param s The color of the side this move should be checked for
+ * @return The move, if parsed correctly or 0 if invalid
+ */
+extern move_t process_algebraic(board_t* board, const char *sz,
+                                size_t len, side_color_t s);
+
+extern int process_moves(board_t *board, undolist_t *ul, char *sz,
+                         size_t len, side_color_t s);
+/**
+ * Returns TRUE if the user has entered the 'quit' command
+ * @param sz The input string
+ * @param len The length of the input string
+ * @return TRUE if quit, FALSE otherwise
+ */
+extern int command_quit(const char *sz, size_t len);
+   

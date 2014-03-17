@@ -31,17 +31,15 @@
 #ifdef _DEBUG
 int main(int argc, const char **argv)
 {
-#if 0
 	fen_state_t fen;
 	ms_time_t tm_before, tm_after;
-	char eptest[] = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1";
-	char sz[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-	char kiwipete[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-	char promo_debug[] = "1r5k/2P5/8/8/8/8/P5p1/K7 w - - 0 1";
 
-	int depth;
-	u64 nodes;
+	move_t m;
+	int i = 0, c;
+	char buf[256];
 	undolist_t ul;
+	int q = FALSE;
+	int nmoves;
 
 	init_zobrist(0xd4e12c77);
 	init_magic();
@@ -49,27 +47,37 @@ int main(int argc, const char **argv)
 
 	fen_init(&fen);
 
-	fen_parse(&fen, eptest, strlen(eptest));
-
-	print_board(fen.board);
+	fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
 
 	ul.count = 0;
-	depth = 3;
 
-	get_current_tick(&tm_before);
-	nodes = perft(fen.board, &ul, depth);
-	get_current_tick(&tm_after);
+	while (!q) {
+		i = 0;
+		print_board(fen.board);
+		printf("\nmove> ");
+		fflush(stdout);
+		while (i < 256) {
+			c = getchar();
 
-	printf("nodes visited at D%d: %lld [%lld ms]\n", depth, nodes, get_interval(&tm_before, &tm_after));
+			if ((c == EOF) || (c == '\r') || (c == '\n')) {
+				buf[i] == 0;
+				break;
+			}
+
+			buf[i] = c;
+			i++;
+		}
+
+		buf[i] = 0;
+
+		if (!(q = command_quit(buf, i))) {
+			nmoves = process_moves(fen.board, &ul, buf, i, fen.board->side);
+
+			printf("-- processed %d moves --\n", nmoves);
+		}
+	}
 
 	fen_destroy(&fen);
-#endif
-
-	init_zobrist(0xd4e12c77);
-	init_magic();
-	init_movelists();
-
-	pertf_runtests();
 
 	return 0;
 }

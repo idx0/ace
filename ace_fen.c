@@ -343,7 +343,7 @@ int fen_init(fen_state_t *fen)
 
 	if (fen->board) {
 		memset(fen->board, 0, sizeof(board_t));
-		memset(fen->board->squares, INVALID_PIECE, 64 * sizeof(u8));
+		memset(fen->board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
 
 		fen->alloc = TRUE;
 	} else {
@@ -367,7 +367,7 @@ int fen_parse(fen_state_t *fen, const char *str, size_t len)
 		fen->read_pos = 0;
 
 		memset(fen->board, 0, sizeof(board_t));
-		memset(fen->board->squares, INVALID_PIECE, 64 * sizeof(u8));
+		memset(fen->board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
 
 		/* fail chain */
 		if ((rc = parse_rank(fen, str, len)) != FEN_SUCCESS) {

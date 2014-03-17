@@ -220,6 +220,11 @@ pip-log.txt
 
 crafty/
 ace_msvc/
+xboard/
+oli/
+data/
+tscp181/
+brucemo/
 ace
 test
 *.o

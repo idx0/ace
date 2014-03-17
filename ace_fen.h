@@ -43,6 +43,8 @@
 /* the FEN structure could not allocate needed memory */
 #define ERROR_FEN_MEMORY			16
 
+#define FEN_OPENING "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+#define FEN_KIWIPETE "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 
 enum fen_parse_state { FEN_RANK_BEGIN = 0, FEN_RANK_END, FEN_SIDE,
 					   FEN_CASTLING, FEN_ENPAS, FEN_HALF, FEN_FULL, FEN_COMPLETE };

@@ -54,9 +54,13 @@ void print_board(const board_t* b)
 	int f, r;
 	u8 i;
 	const char pieces[2][6] = {
-		{ 'P', 'N', 'R', 'B', 'Q', 'K' },
-		{ 'p', 'n', 'r', 'b', 'q', 'k' }
+		{ 'P', 'N', 'B', 'R', 'Q', 'K' },
+		{ 'p', 'n', 'b', 'r', 'q', 'k' }
 	};
+	const char* castles[16] = { "-", "K",  "Q",  "KQ",  "k",  "Kk",  "KQ",  "KQk",
+							    "q", "Kq", "Qq", "KQq", "kq", "Kkq", "Qkq", "KQkq"};
+	const char ranks[8] = { '1', '2', '3', '4', '5', '6', '7', '8' };
+	const char files[8] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
 
 	assert(b);
 
@@ -67,13 +71,27 @@ void print_board(const board_t* b)
 			i = from_rank_file(r - 1, f);
 			assert(is_valid_index(i));
 
-			if (piece_valid(b->squares[i])) {
+			if (piece_valid(b->pos.squares[i])) {
 				printf("%c ",
-					pieces[piece_color(b->squares[i])]
-						  [piece_type(b->squares[i])]);
+					pieces[piece_color(b->pos.squares[i])]
+						  [piece_type(b->pos.squares[i])]);
 			} else {
 				printf(". ");
 			}
+
+			/* print extra stuff */
+		}
+
+		if (r == R7) {
+			printf("  %s", (b->side ? "black" : "white"));
+		} else if (r == R6) {
+			if (is_valid_index(b->enpas)) {
+				printf("  en: %c%c", files[file(b->enpas)], ranks[rank(b->enpas)]);
+			} else {
+				printf("  en: -");
+			}
+		} else if (r == R5) {
+			printf("  %s", castles[b->castle]);
 		}
 
 		printf("\n");
@@ -90,15 +108,15 @@ void print_algebraic(const board_t* b, const move_t move)
 	u8 kind = move_kind(move);
 	piece_t piece;
 	const char pieces[2][6] = {
-		{ 'P', 'N', 'R', 'B', 'Q', 'K' },
-		{ 'p', 'n', 'r', 'b', 'q', 'k' }
+		{ 'P', 'N', 'B', 'R', 'Q', 'K' },
+		{ 'p', 'n', 'b', 'r', 'q', 'k' }
 	};
 	const char ranks[8] = { '1', '2', '3', '4', '5', '6', '7', '8' };
 	const char files[8] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
 
 	assert(b);
 
-	piece = b->squares[from];
+	piece = b->pos.squares[from];
 
 	if (kind == CAPTURE) {
 		if (piece_type(piece) == PAWN) {
@@ -112,8 +130,12 @@ void print_algebraic(const board_t* b, const move_t move)
 		printf("%cx%c%ce.p.", files[file(from)], files[file(to)], ranks[rank(to)]);
 	} else if (is_promotion(kind)) {
 		assert(piece_type(piece) == PAWN);
-		printf("%c%c%c", files[file(to)], ranks[rank(to)],
+		printf("%c%c=%c", files[file(to)], ranks[rank(to)],
 			pieces[piece_color(piece)][promoted_type[kind & 0x03]]);
+	} else if (kind == KING_CASTLE) {
+		printf("O-O");
+	} else if (kind == QUEEN_CASTLE) {
+		printf("O-O-O");
 	} else {
 		if (piece_type(piece) == PAWN) {
 			printf("%c%c", files[file(to)], ranks[rank(to)]);
@@ -122,4 +144,5 @@ void print_algebraic(const board_t* b, const move_t move)
 				files[file(to)], ranks[rank(to)]);
 		}
 	}
+	/* TODO: + for check, # for checkmate */
 }

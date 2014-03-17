@@ -72,12 +72,13 @@ u64 attacking(const board_t* board, const side_color_t s)
 	u32 i;
 
 	assert(board);
+	assert(is_valid_index(board->pos.king_sq[s]));
 
-	occ = (board->occ[WHITE] | board->occ[BLACK]);
-	friendly = ~board->occ[s];
+	occ = (board->pos.occ[WHITE] | board->pos.occ[BLACK]);
+	friendly = ~board->pos.occ[s];
 
 	/* pawns */
-	pieces = board->piece[s][PAWN];
+	pieces = board->pos.piece[s][PAWN];
 	while (pieces) {
 		i = ACE_LSB64(pieces);
 		ret |= pawn_capturelist[s][i] & friendly;
@@ -85,7 +86,7 @@ u64 attacking(const board_t* board, const side_color_t s)
 	}
 
 	/* kinghts */
-	pieces = board->piece[s][KNIGHT];
+	pieces = board->pos.piece[s][KNIGHT];
 	while (pieces) {
 		i = ACE_LSB64(pieces);
 		ret |= knight_movelist[i] & friendly;
@@ -93,7 +94,7 @@ u64 attacking(const board_t* board, const side_color_t s)
 	}
 
 	/* bishops & queens */
-	pieces = (board->piece[s][BISHOP] | board->piece[s][QUEEN]);
+	pieces = (board->pos.piece[s][BISHOP] | board->pos.piece[s][QUEEN]);
 	while (pieces) {
 		i = ACE_LSB64(pieces);
 		ret |= magic_bishop(i, occ) & friendly;
@@ -101,7 +102,7 @@ u64 attacking(const board_t* board, const side_color_t s)
 	}
 
 	/* rooks & queens */
-	pieces = (board->piece[s][ROOK] | board->piece[s][QUEEN]);
+	pieces = (board->pos.piece[s][ROOK] | board->pos.piece[s][QUEEN]);
 	while (pieces) {
 		i = ACE_LSB64(pieces);
 		ret |= magic_rook(i, occ) & friendly;
@@ -109,7 +110,7 @@ u64 attacking(const board_t* board, const side_color_t s)
 	}
 
 	/* kings */
-	ret |= king_movelist[ACE_LSB64(board->piece[s][KING])] & friendly;
+	ret |= king_movelist[board->pos.king_sq[s]] & friendly;
 
 	return ret;
 }
@@ -133,7 +134,7 @@ int is_attacked(const board_t* board, const u32 sq, const side_color_t s)
 	   and an enemy pawn is in the right spot to be captured */
 	if ((is_valid_index(board->enpas)) && 
 		(att & (1ULL << board->enpas)) &&
-		(board->piece[oc][PAWN] & sqbb) &&
+		(board->pos.piece[oc][PAWN] & sqbb) &&
 		(pawn_enpas_move[oc][file(board->enpas)] == sqbb)) {
 		return TRUE;
 	}
@@ -153,7 +154,7 @@ static void generate_knight_moves(const board_t* board, movelist_t* ml, const u6
 
 	oc = (~board->side & 0x01);
 	s = board->side;
-	pieces = board->piece[s][KNIGHT];
+	pieces = board->pos.piece[s][KNIGHT];
 
 	/* knight moves */
 	while (pieces) {
@@ -163,7 +164,7 @@ static void generate_knight_moves(const board_t* board, movelist_t* ml, const u6
 
 		/* add the move from our precomputed move list */
 		add_quiet_move((knight_movelist[i] & ~occ), i, ml);
-		add_capture_move((knight_movelist[i] & board->occ[oc]), i, ml);
+		add_capture_move((knight_movelist[i] & board->pos.occ[oc]), i, ml);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -183,7 +184,7 @@ static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml, co
 	oc = (~board->side & 0x01);
 	s = board->side;
 
-	pieces = board->piece[s][BISHOP] | board->piece[s][QUEEN];
+	pieces = board->pos.piece[s][BISHOP] | board->pos.piece[s][QUEEN];
 
 	/* bishop and queen moves */
 	while (pieces) {
@@ -194,7 +195,7 @@ static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml, co
 		/* add the move as generated from the magic tables */
 		move = magic_bishop(i, occ);
 		add_quiet_move((move & ~occ), i, ml);
-		add_capture_move((move & board->occ[oc]), i, ml);
+		add_capture_move((move & board->pos.occ[oc]), i, ml);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -214,7 +215,7 @@ static void generate_rook_queen_moves(const board_t* board, movelist_t* ml, cons
 	oc = (~board->side & 0x01);
 	s = board->side;
 
-	pieces = board->piece[s][ROOK] | board->piece[s][QUEEN];
+	pieces = board->pos.piece[s][ROOK] | board->pos.piece[s][QUEEN];
 
 	/* rook and queen moves */
 	while (pieces) {
@@ -225,7 +226,7 @@ static void generate_rook_queen_moves(const board_t* board, movelist_t* ml, cons
 		/* add the move as generated from the magic tables */
 		move = magic_rook(i, occ);
 		add_quiet_move((move & ~occ), i, ml);
-		add_capture_move((move & board->occ[oc]), i, ml);
+		add_capture_move((move & board->pos.occ[oc]), i, ml);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -245,7 +246,7 @@ static void generate_pawn_moves(const board_t* board, movelist_t* ml, const u64 
 	oc = (~board->side & 0x01);
 	s = board->side;
 
-	pieces = board->piece[s][PAWN];
+	pieces = board->pos.piece[s][PAWN];
 
 	while (pieces) {
 		/* we should do LSB for white and MSB for black,
@@ -253,7 +254,7 @@ static void generate_pawn_moves(const board_t* board, movelist_t* ml, const u64 
 		i = ACE_LSB64(pieces);
 
 		move = pawn_movelist[s][i] & ~occ;
-		capture = (pawn_capturelist[s][i] & board->occ[oc]);
+		capture = (pawn_capturelist[s][i] & board->pos.occ[oc]);
 
 		/* If move is non-zero, it means a pawn is able to move.  If it is moving
 		   to the en passant square, add another move if we can. */
@@ -299,8 +300,9 @@ static void generate_king_moves(const board_t* board, movelist_t* ml, const u64 
 
 	oc = (~board->side & 0x01);
 	s = board->side;
+	i = board->pos.king_sq[s];
 
-	i = ACE_LSB64(board->piece[s][KING]);
+	assert(is_valid_index(board->pos.king_sq[s]));
 
 	/* get all attacked positions */
 	opp = attacking(board, oc);
@@ -310,11 +312,11 @@ static void generate_king_moves(const board_t* board, movelist_t* ml, const u64 
 
 	/* AND in ~opp to ensure the king cannot move to an attacked position */
 	add_quiet_move((moves & ~occ & ~opp), i, ml);
-	add_capture_move((moves & board->occ[oc] & ~opp), i, ml);
+	add_capture_move((moves & board->pos.occ[oc] & ~opp), i, ml);
 
 	/* generate castling moves */
 	castle_bits = (board->castle & (3 << (2 * s)));
-	check = (board->piece[s][KING] & opp);
+	check = (board->pos.piece[s][KING] & opp);
 
 	moves = 0ULL;
 	while (castle_bits) {
@@ -338,7 +340,7 @@ u32 generate_moves(const board_t* board, movelist_t* ml)
 	assert(ml);
 
 	ml->count = 0;
-	occ = board->occ[WHITE] | board->occ[BLACK];
+	occ = board->pos.occ[WHITE] | board->pos.occ[BLACK];
 
 	generate_rook_queen_moves(board, ml, occ);
 	generate_bishop_queen_moves(board, ml, occ);
@@ -359,21 +361,41 @@ piece_t remove_piece(board_t* board, const u32 sq)
 
 	assert(is_valid_index(sq));
 	assert(board);
-	assert(piece_valid(board->squares[sq]));
+	assert(piece_valid(board->pos.squares[sq]));
 
-	piece = board->squares[sq];
+	piece = board->pos.squares[sq];
 	color = piece_color(piece);
 	type = piece_type(piece);
 
-	assert(sqbb & board->piece[color][type]);
+	assert(sqbb & board->pos.piece[color][type]);
 
 	/* hash out the piece */
 	board->key ^= hash_piece[color][type][sq];
 
 	/* clear the piece */
-	board->squares[sq] = INVALID_PIECE;
-	board->piece[color][type] ^= sqbb;
-	board->occ[color] ^= sqbb;
+	board->pos.squares[sq] = INVALID_PIECE;
+	board->pos.piece[color][type] ^= sqbb;
+	board->pos.occ[color] ^= sqbb;
+
+	board->pos.material[color] -= piece_material_values[type];
+	board->pos.npieces--;
+
+	switch (type) {
+		case PAWN:
+			board->pos.pawns ^= sqbb;
+			break;
+		case KNIGHT:
+		case BISHOP:
+			board->pos.minors[color]--;
+			break;
+		case ROOK:
+		case QUEEN:
+			board->pos.majors[color]--;
+			break;
+		case KING:	/* this better not happen! */
+			board->pos.king_sq[color] = INVALID_SQUARE;
+			break;
+	}
 
 	return piece;
 }
@@ -393,18 +415,38 @@ void add_piece(board_t* board, const u32 sq, const piece_t piece)
 	type = piece_type(piece);
 
 	/* assert that sq does not already contain that piece */
-	assert(!(board->piece[color][type] & sqbb));
+	assert(!(board->pos.piece[color][type] & sqbb));
 
 	/* assert that sq is empty */
-	assert(!((board->occ[WHITE] | board->occ[BLACK]) & sqbb));
+	assert(!((board->pos.occ[WHITE] | board->pos.occ[BLACK]) & sqbb));
 
 	/* hash in the piece */
 	board->key ^= hash_piece[color][type][sq];
 
 	/* add the piece */
-	board->squares[sq] = piece;
-	board->piece[color][type] ^= sqbb;
-	board->occ[color] ^= sqbb;
+	board->pos.squares[sq] = piece;
+	board->pos.piece[color][type] ^= sqbb;
+	board->pos.occ[color] ^= sqbb;
+
+	board->pos.material[color] += piece_material_values[type];
+	board->pos.npieces++;
+
+	switch (type) {
+		case PAWN:
+			board->pos.pawns ^= sqbb;
+			break;
+		case KNIGHT:
+		case BISHOP:
+			board->pos.minors[color]++;
+			break;
+		case ROOK:
+		case QUEEN:
+			board->pos.majors[color]++;
+			break;
+		case KING:
+			board->pos.king_sq[color] = sq;
+			break;
+	}
 }
 
 
@@ -419,28 +461,39 @@ piece_t move_piece(board_t* board, const u32 from, const u32 to)
 	assert(is_valid_index(to));
 	assert(is_valid_index(from));
 	assert(board);
-	assert(piece_valid(board->squares[from]));
+	assert(piece_valid(board->pos.squares[from]));
 
-	piece = board->squares[from];
+	piece = board->pos.squares[from];
 	color = piece_color(piece);
 	type = piece_type(piece);
 
-	assert(frombb & board->piece[color][type]);
-	assert(!((board->occ[WHITE] | board->occ[BLACK]) & tobb));
+	assert(frombb & board->pos.piece[color][type]);
+	assert(!((board->pos.occ[WHITE] | board->pos.occ[BLACK]) & tobb));
 
 	/* hash out from, in to */
 	board->key ^= hash_piece[color][type][from];
 	board->key ^= hash_piece[color][type][to];
 
 	/* clear from piece */
-	board->squares[from] = INVALID_PIECE;
-	board->piece[color][type] ^= frombb;
-	board->occ[color] ^= frombb;
+	board->pos.squares[from] = INVALID_PIECE;
+	board->pos.piece[color][type] ^= frombb;
+	board->pos.occ[color] ^= frombb;
 
 	/* add to piece */
-	board->squares[to] = piece;
-	board->piece[color][type] ^= tobb;
-	board->occ[color] ^= tobb;
+	board->pos.squares[to] = piece;
+	board->pos.piece[color][type] ^= tobb;
+	board->pos.occ[color] ^= tobb;
+
+	switch (type) {
+		case PAWN:
+			board->pos.pawns ^= frombb;
+			board->pos.pawns ^= tobb;
+			break;
+		case KING:
+			board->pos.king_sq[color] = to;
+			break;
+		default: break;
+	}
 
 	return piece;
 }
@@ -459,7 +512,7 @@ int do_move(board_t* board, undolist_t* ul, const move_t move)
 	assert(is_valid_index(to));
 	assert(ul);
 	assert(board);
-	assert(piece_valid(board->squares[from]));
+	assert(piece_valid(board->pos.squares[from]));
 
 	s = board->side;
 	oc = (~board->side & 0x01);
@@ -499,7 +552,7 @@ int do_move(board_t* board, undolist_t* ul, const move_t move)
 	/* captures */
 	if ((kind == CAPTURE) || (kind >= 0x0c)) {
 		board->plies = 0;
-		ul->undo[ul->count].capture = board->squares[to];
+		ul->undo[ul->count].capture = board->pos.squares[to];
 		remove_piece(board, to);
 	}
 
@@ -534,7 +587,7 @@ int do_move(board_t* board, undolist_t* ul, const move_t move)
 
 	/* are we in check? */
 	opp = attacking(board, oc);
-	if (board->piece[s][KING] & opp) {
+	if (board->pos.piece[s][KING] & opp) {
 		undo_move(board, ul);
 		return FALSE;
 	}
@@ -610,4 +663,63 @@ void undo_move(board_t* board, undolist_t* ul)
 		remove_piece(board, from);
 		add_piece(board, from, sPAWNS[oc]);
 	}
+}
+
+
+void do_null_move(board_t* board, undolist_t* ul)
+{
+	side_color_t oc;
+
+	assert(board);
+	assert(ul);
+
+	oc = (~board->side & 0x01);
+
+	ul->undo[ul->count].key = board->key;
+
+	ul->undo[ul->count].move = 0;
+	ul->undo[ul->count].plies = board->plies;
+	ul->undo[ul->count].enpas = board->enpas;
+	ul->undo[ul->count].castle = board->castle;
+	ul->undo[ul->count].capture = INVALID_PIECE;
+
+	if (is_valid_index(board->enpas)) board->key ^= hash_enpas[file(board->enpas)];
+	board->enpas = INVALID_SQUARE;
+
+	ul->count++;
+	board->moves++;
+	board->search_ply++;
+
+	/* flip the side */
+	board->side = oc;
+	/* if we were white, now we are black, so we hash the side in, otherwise
+	   we are hashing the side out */
+	board->key ^= hash_side;
+}
+
+
+void undo_null_move(board_t* board, undolist_t* ul)
+{
+	side_color_t oc;
+
+	assert(board);
+	assert(ul);
+
+	oc = (~board->side & 0x01);
+
+	ul->count--;
+	board->search_ply--;
+	board->moves--;
+
+	board->castle = ul->undo[ul->count].castle;
+	board->enpas = ul->undo[ul->count].enpas;
+	board->plies = ul->undo[ul->count].plies;
+
+	if (is_valid_index(board->enpas)) board->key ^= hash_enpas[file(board->enpas)];
+
+	/* flip the side */
+	board->side = oc;
+	/* if we were white, now we are black, so we hash the side in, otherwise
+	   we are hashing the side out */
+	board->key ^= hash_side;
 }

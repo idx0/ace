@@ -45,7 +45,7 @@ extern void get_current_tick(ms_time_t* t);
 extern u64 get_interval(const ms_time_t *then, const ms_time_t* now);
 
 /* piece definition: piece type */
-typedef enum piece_type { PAWN = 0, KNIGHT, ROOK, BISHOP, QUEEN, KING } piece_type_t;
+typedef enum piece_type { PAWN = 0, KNIGHT, BISHOP, ROOK, QUEEN, KING } piece_type_t;
 
 /* piece definition: piece color, also used for side */
 typedef enum piece_color { WHITE = 0, BLACK } piece_color_t;
@@ -75,16 +75,6 @@ typedef enum algebraic {
 /* side definition: color, this is a redefinition of piece_color for
    consistancy */
 #define side_color_t piece_color_t
-
-/* this structure holds the rank and file in an 8 bit word */
-struct position {
-	u8 rank : 4;
-	u8 file : 4;
-};
-
-#define POSITION_INVALID 0x88
-#define POSITION_MASK	 0x77
-#define ASU8(pos) (*(u8*)&(pos))
 
 /* this structure defines a piece, as used by our piece list */
 typedef u8 piece_t;
@@ -161,16 +151,30 @@ typedef struct undolist {
 	u32 count;
 } undolist_t;
 
-/* board structure */
-typedef struct board {
-
+typedef struct position {
 	/* bitboard which represents all pieces */
 	u64 piece[2][6];
-
+	/* an array of each piece on each square */
 	piece_t squares[64];
-
+	/* major pieces: rooks & queens */
+	u8 majors[2];
+	/* minor pieces: bishops & knights */
+	u8 minors[2];
+	/* a bitboard of all pawns */
+	u64 pawns;
+	/* the king square */
+	u32 king_sq[2];
+	/* total number of pieces on the board */
+	u8 npieces;
+	/* material count */
+	int material[2];
 	/* bitboard which represents all occupied sq for this color */
 	u64 occ[2];
+} position_t;
+
+/* board structure */
+typedef struct board {
+	position_t pos;
 
 	/* number of moves and half-moves (half-moves are respective of 50 move
 	   rule) */
