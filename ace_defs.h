@@ -20,10 +20,14 @@
 #if defined (_WIN64)
 # define ACE_WIN64
 # define ACE_WINDOWS
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
 # include <intrin.h>
 #elif defined (_WIN32)
 # define ACE_WIN32
 # define ACE_WINDOWS
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
 # include <intrin.h>
 #elif defined (__APPLE__)
 # define ACE_MAC
@@ -50,3 +54,9 @@
 
 #undef ACE_BITTEST
 #define ACE_BITTEST(a, b) ((a) & (1ULL << (b)))
+
+#define ACE_NAME	"ace"
+#define ACE_DESC	"Another Chess Engine"
+#define ACE_AUTHOR	"Stephen Schweizer"
+#define ACE_EMAIL	"<code@theindexzero.com>"
+#define ACE_VERSION	"0.650"

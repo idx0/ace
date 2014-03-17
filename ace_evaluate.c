@@ -32,16 +32,16 @@ static int check_material_draw(board_t *board)
 
 	/* king & bishop vs. king */
 	if ((board->pos.npieces == 3) &&
-		((board->pos.minors[WHITE] == 1) && (!board->pos.piece[WHITE][KNIGHT])) ||
-		((board->pos.minors[BLACK] == 1) && (!board->pos.piece[BLACK][KNIGHT])))
+		(((board->pos.minors[WHITE] == 1) && (!board->pos.piece[WHITE][KNIGHT])) ||
+		 ((board->pos.minors[BLACK] == 1) && (!board->pos.piece[BLACK][KNIGHT]))))
 	{
 		return TRUE;
 	}
 
 	/* king & knight vs. king */
 	if ((board->pos.npieces == 3) &&
-		((board->pos.minors[WHITE] == 1) && (!board->pos.piece[WHITE][BISHOP])) ||
-		((board->pos.minors[BLACK] == 1) && (!board->pos.piece[BLACK][BISHOP])))
+		(((board->pos.minors[WHITE] == 1) && (!board->pos.piece[WHITE][BISHOP])) ||
+		 ((board->pos.minors[BLACK] == 1) && (!board->pos.piece[BLACK][BISHOP]))))
 	{
 		return TRUE;
 	}

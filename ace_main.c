@@ -32,39 +32,54 @@ int main(int argc, char **argv)
 int main2(int argc, char **argv)
 #endif
 {
-#if 0
-	fen_state_t fen;
-	ms_time_t tm_before, tm_after;
-	char sz[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -";
-	int depth;
-	u64 nodes;
-	undolist_t ul;
+	int i = 0, c;
+	char buf[256];
+	app_t app;
 
-	assert(FALSE);
-
-	fen_init(&fen);
-	fen_parse(&fen, sz, strlen(sz));
-
-	print_board(fen.board);
-
-	ul.count = 0;
-	depth = 5;
-
-	get_current_tick(&tm_before);
-	nodes = perft(fen.board, &ul, depth);
-	get_current_tick(&tm_after);
-
-	printf("nodes visited at D%d: %lld [%lld ms]\n", depth, nodes, get_interval(&tm_before, &tm_after));
-
-	fen_destroy(&fen);
-#endif
 	init_zobrist(0xd4e12c77);
 	init_magic();
 	init_movelists();
 
-	perft_kiwipete();
-	printf("-----\n");
-	pertf_runtests();
+	init_app(&app);
+
+	printf("%s v%s - %s\n", ACE_NAME, ACE_VERSION, ACE_DESC);
+	printf("%s %s\n", ACE_AUTHOR, ACE_EMAIL);
+
+	while (!app.quit) {
+		switch (app.mode) {
+			case IACE:
+				printf("\nace> ");
+				break;
+			case IMOVE:
+				printf("\nace move> ");
+				break;
+			case IFEN:
+				printf("\nace fen> ");
+				break;
+			default: break;
+		}
+
+		i = 0;
+		fflush(stdout);
+		while (i < 256) {
+			c = getchar();
+
+			if ((c == EOF) || (c == '\r') || (c == '\n')) {
+				buf[i] = 0;
+				break;
+			}
+
+			buf[i] = c;
+			i++;
+		}
+		buf[i] = 0;
+
+		/* process_command */
+		if (!process_command(&app, buf, i)) {
+			fprintf(stderr, "ace: unrecognized command string `%s'\n", buf);
+		}
+	}
 
 	return 0;
 }
+

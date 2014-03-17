@@ -29,8 +29,6 @@
 #endif
 
 #ifdef ACE_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 typedef struct ms_time {
 	u64 time;
 } ms_time_t;
@@ -196,3 +194,13 @@ typedef struct board {
 	/* zobrist hash key */
 	u64 key;
 } board_t;
+
+typedef enum input_mode { IACE, IUCI, IXBOARD, IMOVE, IFEN } input_mode_t;
+
+typedef struct ace_app {
+	board_t* board;
+	undolist_t ul;
+
+	int quit;
+	input_mode_t mode;
+} app_t;

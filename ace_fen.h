@@ -74,9 +74,9 @@ typedef struct fen_state {
 
 	enum fen_parse_state state;
 	
-	board_rank_t		 cur_rank;
-	size_t				 read_pos;
-	int 				 alloc;
+	board_rank_t cur_rank;
+	size_t		 read_pos;
+	int 		 alloc;
 
 	board_t* board; /* TODO */
 } fen_state_t;
@@ -87,6 +87,13 @@ typedef struct fen_state {
  * @return FEN_SUCCESS if successful, some ERROR_FEN_X if unsuccessful
  */
 extern int fen_init(fen_state_t *fen);
+
+/**
+ * Tells fen to use the given board pointer instead of it's internal one
+ * @param fen FEN state structure
+ * @param boardptr Pointer to a valid board
+ */
+extern void fen_use_ptr(fen_state_t *fen, board_t *boardptr);
 
 /**
  * Parses the given string into the fen structure

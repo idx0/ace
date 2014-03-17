@@ -110,6 +110,7 @@ u64* ray_list[8];
  * Initializes the precomputed movelist arrays
  */
 extern void init_movelists();
+extern void init_app(app_t *app);
 /* Returns a bitboard representing all the squares attacked by side s.  This 
  * does not include the pawn who made an en passant move.
  * @param board The board structure
@@ -201,6 +202,16 @@ extern void pertf_runtests();
  */
 extern move_t process_algebraic(board_t* board, const char *sz,
                                 size_t len, side_color_t s);
+/**
+ * Processes a move in long algebraic notation from user input
+ * @param board The board structure
+ * @param sz The input string
+ * @param len The length of the input string
+ * @param s The color of the side this move should be checked for
+ * @return The move, if parsed correctly or 0 if invalid
+ */
+extern move_t process_long_notation(board_t* board, const char *sz,
+                                    size_t len, side_color_t s);
 
 extern int process_moves(board_t *board, undolist_t *ul, char *sz,
                          size_t len, side_color_t s);
@@ -211,4 +222,19 @@ extern int process_moves(board_t *board, undolist_t *ul, char *sz,
  * @return TRUE if quit, FALSE otherwise
  */
 extern int command_quit(const char *sz, size_t len);
-   
+
+/**
+ * Processes a command from the given string
+ * @param quit A pointer to the application handle
+ * @param sz The input string
+ * @param len The length of the input string
+ * @return TRUE if the command was processed succesfully, FALSE otherwise
+ */
+extern int process_command(app_t *app, char *sz, size_t len);
+
+/**
+ * OS inpendent function which returns true if input is ready to be read from
+ * stdin
+ * @return TRUE if input is ready, FALSE otherwise
+ */
+extern int input_ready();

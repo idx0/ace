@@ -1,19 +1,25 @@
 CC := gcc
-CFLAGS := -Wall -Wunused -Wuninitialized -Wno-format -std=c99
+CFLAGS := -Wall -Wunused -Wno-format
 
 OBJS := \
 	ace_fen.o \
 	ace_display.o \
 	ace_init.o \
+	ace_const.o \
 	ace_zobrist.o \
 	ace_magic.o \
 	ace_move.o \
+	ace_input.o \
+	ace_evaluate.o \
+	ace_search.o \
+	ace_thread.o \
 	ace_perft.o
 
 INCLUDES :=
 
 LIBS := \
-	-lm
+	-lm \
+	-lpthread
 
 TARGET := ace
 
@@ -26,10 +32,16 @@ TEST_OBJ := ace_test.o
 ace_test.o: ace_test.c
 	$(CC) $(CFLAGS) -D_DEBUG -c -o $@ $<
 
-all: CFLAGS += -O3 -DNDEBUG
-all: $(MAIN_OBJ) $(OBJS)
+all: CFLAGS += -O3 -Wuninitialized -DNDEBUG
+all: main
+
+main: $(MAIN_OBJ) $(OBJS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(MAIN_OBJ) $(LIBS)
 
+debug: CFLAGS += -ggdb
+debug: main
+
+test: CFLAGS += -ggdb
 test: $(TEST_OBJ) $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(TEST_OBJ) $(LIBS)
 

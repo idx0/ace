@@ -22,6 +22,7 @@
 #include "ace_types.h"
 #include "ace_fen.h"
 #include "ace_global.h"
+#include "ace_display.h"
 
 static piece_type_t process_piece_type(char c)
 {
@@ -70,10 +71,13 @@ static u8 get_source_sq(const board_t* board, const movelist_t* ml,
 
 int command_quit(const char *sz, size_t len)
 {
-    static const char q[] = "quit";
+    static const char cmd_quit[] = "quit";
+    static const char cmd_exit[] = "exit";
 
     if (len >= 4) {
-        if (strncmp(sz, q, 4) == 0) {
+        if (strncmp(sz, cmd_quit, 4) == 0) {
+            return TRUE;
+        } else if (strncmp(sz, cmd_exit, 4) == 0) {
             return TRUE;
         }
     }
@@ -112,9 +116,9 @@ move_t process_algebraic(board_t* board, const char *sz,
 						 size_t len, side_color_t s)
 {
 	move_t output;
-	piece_type_t piece;
-	board_rank_t dest_rank;
-	board_file_t dest_file, src_file = 0;
+	piece_type_t piece = PAWN;
+	board_rank_t dest_rank = 0;
+	board_file_t dest_file = 0, src_file = 0;
 	u8 kind, to, from;
 	movelist_t ml;
 	undolist_t ul;
@@ -135,6 +139,10 @@ move_t process_algebraic(board_t* board, const char *sz,
     	TBEGIN, TPAWN, TQUIET, TPAWNCAP, TCAP, TPROMO,
     	TPROMOCAP, TCASTLE, TKING, TQUEEN, TERROR
     } move_think;
+
+    assert(board);
+    assert(sz);
+    assert(len);
 
     move_think = TBEGIN;
 
@@ -192,6 +200,7 @@ move_t process_algebraic(board_t* board, const char *sz,
     		}
     	} else {
     		/* invalid */
+            move_think = TERROR;
     		printf("character `%c' invalid.\n", c);
     	}
     }
@@ -282,4 +291,257 @@ move_t process_algebraic(board_t* board, const char *sz,
 
     /* if we get here, the move is illegal or invalid */
     return 0;
+}
+
+
+move_t process_long_notation(board_t* board, const char *sz,
+                             size_t len, side_color_t s)
+{
+    piece_type_t piece = PAWN;
+    board_file_t tof = 0, fromf = 0;
+    board_rank_t tor = 0, fromr = 0;
+    move_t output = 0;
+    size_t i;
+    char c;
+    int valid = TRUE;
+    movelist_t ml;
+    undolist_t ul;
+
+    /*
+     * normal move [from file][from rank][to file][to rank]
+     * null move 0000
+     * pawn promotion [from file][from rank][to file][to rank][piece type]
+     */
+    enum {
+        TBEGIN, TFROM, TTO, TNORMAL, TPROMO, TNULL, TERROR
+    } move_think;
+
+    assert(board);
+    assert(sz);
+    assert(len);
+
+    move_think = TBEGIN;
+
+    for (i = 0; i < len; i++) {
+        c = sz[i];
+
+        if (isfile(c)) {
+            if (move_think == TBEGIN) {
+                move_think = TFROM;
+                fromf = (c - 'a');
+            } else if (move_think == TFROM) {
+                move_think = TTO;
+                tof = (c - 'a');
+            }
+        } else if (isrank(c)) {
+            if (move_think == TFROM) {
+                fromr = (c - '1');
+            } else if (move_think == TTO) {
+                tor = (c - '1');
+                move_think = TNORMAL;
+            }
+        } else if (iswhite(c) || isblack(c)) {
+            if (move_think == TNORMAL) {
+                move_think = TPROMO;
+                piece = process_piece_type(c);
+            }
+        } else if (c == '0') {
+            if (move_think == TBEGIN) {
+                move_think = TNULL;
+            }
+        } else {
+            move_think = TERROR;
+            printf("character `%c' invalid.\n", c);
+        }
+    }
+
+    /* niavely generate a move, don't worry about kind */
+    switch (move_think) {
+        case TNORMAL:
+        case TPROMO:
+            output = to_move(from_rank_file(fromr, fromf),
+                             from_rank_file(tor, tof),
+                             0);
+            break;
+        default: output = 0; break;
+    }
+
+    /* if we couldn't generate a move, return */
+    if (!output) return 0;
+
+    /* ok, let's generate a list of valid moves and verify */
+    generate_moves(board, &ml);
+
+    /* finally, check if the move we think we made is in our move list */
+    ul.count = 0;
+    for (i = 0; i < ml.count; i++) {
+        /* found our move */
+        if ((ml.moves[i] & 0x0fff) == output) {
+            /* check promotion */
+            if (move_think == TPROMO) {
+                if ((is_promotion(ml.moves[i])) &&
+                    (promoted_type[move_kind(ml.moves[i]) & 0x03] == piece))
+                {
+                    /* move valid */
+                }
+                else
+                    valid = FALSE;
+            }
+
+            if ((valid) && (do_move(board, &ul, output))) {
+                /* the move is ok, the king is not left in check */
+                undo_move(board, &ul);
+
+                return ml.moves[i];
+            } else {
+                ml.moves[i] = 0;
+            }
+        } else {
+            /* set the move to zero */
+            ml.moves[i] = 0;
+        }
+    }
+
+    /* if we get here, the move is illegal or invalid */
+    return 0;
+}
+
+
+/* OS independent input ready function as used by olithink, crafy, and others */
+int input_ready()
+{
+#ifdef ACE_UNIX
+    struct timeval tv;
+    fd_set readfds;
+
+    FD_ZERO(&readfds);
+    FD_SET(fileno(stdin), &readfds);
+
+    tv.tv_sec=0;
+    tv.tv_usec=0;
+
+    select(16, &readfds, 0, 0, &tv);
+
+    return (FD_ISSET(fileno(stdin), &readfds));
+#else
+    static int init = 0, pipe;
+    static HANDLE h;
+    DWORD dw;
+
+    if (!init) {
+        init = 1;
+        h = GetStdHandle(STD_INPUT_HANDLE)
+        pipe = !GetConsoleMode(h, &dw);
+
+        if (!pipe) {
+            SetConsoleMode(h, dw & ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT));
+            FlushConsoleInputBuffer(inh);
+        }
+    }
+
+    if (pipe) {
+        if (!PeekNamedPipe(h, NULL, 0, NULL, &dw, NULL)) {
+            return TRUE;
+        }
+
+        return dw;
+    } else {
+        GetNumberOfConsoleInputEvents(h, &dw);
+        return (dw <= 1 ? FALSE : dw);
+    }
+#endif
+}
+
+
+static int command_done(const char *sz, size_t len)
+{
+    static const char cmd[] = "done";
+
+    if (len >= 4) {
+        if (strncmp(sz, cmd, 4) == 0) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+
+static int process_ace_command(app_t *app, char *sz, size_t len)
+{
+    static const char delim[] = " \t\r\n";
+    fen_state_t fen;
+    char *ptr;
+    size_t cmdlen;
+    ptr = strtok(sz, delim);
+
+    if (ptr) {
+        cmdlen = strlen(ptr);
+
+        if (strncmp(ptr, "print", 5) == 0) {
+            printf("\n");
+            print_board(app->board);
+        } else if (strncmp(ptr, "fen", 3) == 0) {
+            app->mode = IFEN;
+        } else if (strncmp(ptr, "move", 4) == 0) {
+            app->mode = IMOVE;
+        } else if (strncmp(ptr, "uci", 3) == 0) {
+            app->mode = IUCI;
+            printf("id name %s %s\n", ACE_NAME, ACE_VERSION);
+            printf("id author %s\n", ACE_AUTHOR);
+            printf("uciok\n");
+        } else if (strncmp(ptr, "init", 4) == 0) {
+            fen_init(&fen);
+            fen_use_ptr(&fen, app->board);
+            fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
+            fen_destroy(&fen);
+            app->ul.count = 0;
+        } else if (strncmp(ptr, "perft", 5) == 0) {
+            perft_kiwipete();
+            printf("-----\n");
+            pertf_runtests();
+        } else if (strncmp(ptr, "help", 4) == 0) {
+        } else {
+            printf("ace: received command `%s'\n", ptr);
+        }
+    }
+
+    return TRUE;
+}
+
+
+int process_command(app_t *app, char *sz, size_t len)
+{
+    fen_state_t fen;
+
+    assert(app);
+
+    /* check for quit first */
+    if (command_quit(sz, len)) {
+        app->quit = TRUE;
+    } else {
+        switch (app->mode)
+        {
+            case IMOVE:
+                if (!command_done(sz, len)) {
+                    process_moves(app->board, &app->ul, sz, len, app->board->side);
+                } else {
+                    app->mode = IACE;
+                }
+                break;
+            case IFEN:
+                fen_init(&fen);
+                fen_use_ptr(&fen, app->board);
+                fen_parse(&fen, sz, len);
+                fen_destroy(&fen);
+                app->mode = IACE;
+                break;
+            case IACE:
+                process_ace_command(app, sz, len);
+                break;
+            default: break;
+        }
+    }
+
+    return TRUE;
 }

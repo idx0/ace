@@ -361,44 +361,56 @@ int fen_parse(fen_state_t *fen, const char *str, size_t len)
 	assert(fen);
 	assert(fen->board);
 
-	if (fen->alloc == TRUE) {
-		fen->state = FEN_RANK_BEGIN;
-		fen->cur_rank = R1;
-		fen->read_pos = 0;
+	fen->state = FEN_RANK_BEGIN;
+	fen->cur_rank = R1;
+	fen->read_pos = 0;
 
-		memset(fen->board, 0, sizeof(board_t));
-		memset(fen->board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
+	memset(fen->board, 0, sizeof(board_t));
+	memset(fen->board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
 
-		/* fail chain */
-		if ((rc = parse_rank(fen, str, len)) != FEN_SUCCESS) {
-			fprintf(stderr, "fen_parse: error %d in rank at %ld `%c'\n",
-				rc,
-				fen->read_pos,
-				(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
-		} else if ((rc = parse_side(fen, str, len)) != FEN_SUCCESS) {
-			fprintf(stderr, "fen_parse: error %d in side at %ld `%c'\n",
-				rc,
-				fen->read_pos,
-				(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
-		} else if ((rc = parse_castle(fen, str, len)) != FEN_SUCCESS) {
-			fprintf(stderr, "fen_parse: error %d in castle at %ld `%c'\n",
-				rc,
-				fen->read_pos,
-				(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
-		} else if ((rc = parse_enpas(fen, str, len)) != FEN_SUCCESS) {
-			fprintf(stderr, "fen_parse: error %d in enpas at %ld `%c'\n",
-				rc,
-				fen->read_pos,
-				(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
-		} else if ((rc = parse_moves(fen, str, len)) != FEN_SUCCESS) {
-			fprintf(stderr, "fen_parse: error %d in moves at %ld `%c'\n",
-				rc,
-				fen->read_pos,
-				(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
-		}
+	/* fail chain */
+	if ((rc = parse_rank(fen, str, len)) != FEN_SUCCESS) {
+		fprintf(stderr, "fen_parse: error %d in rank at %ld `%c'\n",
+			rc,
+			fen->read_pos,
+			(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
+	} else if ((rc = parse_side(fen, str, len)) != FEN_SUCCESS) {
+		fprintf(stderr, "fen_parse: error %d in side at %ld `%c'\n",
+			rc,
+			fen->read_pos,
+			(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
+	} else if ((rc = parse_castle(fen, str, len)) != FEN_SUCCESS) {
+		fprintf(stderr, "fen_parse: error %d in castle at %ld `%c'\n",
+			rc,
+			fen->read_pos,
+			(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
+	} else if ((rc = parse_enpas(fen, str, len)) != FEN_SUCCESS) {
+		fprintf(stderr, "fen_parse: error %d in enpas at %ld `%c'\n",
+			rc,
+			fen->read_pos,
+			(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
+	} else if ((rc = parse_moves(fen, str, len)) != FEN_SUCCESS) {
+		fprintf(stderr, "fen_parse: error %d in moves at %ld `%c'\n",
+			rc,
+			fen->read_pos,
+			(fen->read_pos < len ? str[fen->read_pos] : str[len - 1]));
 	}
 
 	return rc;
+}
+
+
+void fen_use_ptr(fen_state_t *fen, board_t *boardptr)
+{
+	assert(fen);
+	assert(boardptr);
+
+	if (fen->alloc) {
+		free(fen->board);
+		fen->alloc = FALSE;
+	}
+
+	fen->board = boardptr;
 }
 
 
