@@ -102,7 +102,7 @@ int process_moves(board_t *board, undolist_t *ul, char *sz,
             do_move(board, ul, m);
             nmoves++;
         } else {
-            printf("process_moves stopped - invalid move `%s'\n", ptr);
+            fprintf(stderr, "ace: process moves stopped - invalid move `%s'\n", ptr);
         }
 
         ptr = strtok(NULL, delim);
@@ -153,7 +153,9 @@ move_t process_algebraic(board_t* board, const char *sz,
     	if (isfile(c)) {
     		if (move_think == TBEGIN) {
     			move_think = TPAWN;
-    		}
+    		} else if (move_think != TPAWNCAP) {
+                move_think = TERROR;
+            }
     		dest_file = (c - 'a');
     	} else if (isrank(c)) {
     		dest_rank = (c - '1');
@@ -201,7 +203,7 @@ move_t process_algebraic(board_t* board, const char *sz,
     	} else {
     		/* invalid */
             move_think = TERROR;
-    		printf("character `%c' invalid.\n", c);
+    		fprintf(stderr, "ace: character `%c' invalid.\n", c);
     	}
     }
 
@@ -351,7 +353,7 @@ move_t process_long_notation(board_t* board, const char *sz,
             }
         } else {
             move_think = TERROR;
-            printf("character `%c' invalid.\n", c);
+            fprintf(stderr, "ace: character `%c' invalid.\n", c);
         }
     }
 
@@ -467,10 +469,17 @@ static int command_done(const char *sz, size_t len)
 }
 
 
+static int is_shorthand(const char *ptr, size_t len, char match)
+{
+    return ((len == 1) && (ptr[0] == match));
+}
+
+
 static int process_ace_command(app_t *app, char *sz, size_t len)
 {
     static const char delim[] = " \t\r\n";
     fen_state_t fen;
+    move_t m;
     char *ptr;
     size_t cmdlen;
     ptr = strtok(sz, delim);
@@ -478,12 +487,14 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
     if (ptr) {
         cmdlen = strlen(ptr);
 
-        if (strncmp(ptr, "print", 5) == 0) {
+        if ((strncmp(ptr, "print", 5) == 0) ||
+            is_shorthand(ptr, cmdlen, 'p')) {
             printf("\n");
             print_board(app->board);
         } else if (strncmp(ptr, "fen", 3) == 0) {
             app->mode = IFEN;
-        } else if (strncmp(ptr, "move", 4) == 0) {
+        } else if ((strncmp(ptr, "move", 4) == 0) ||
+                   is_shorthand(ptr, cmdlen, 'm')) {
             app->mode = IMOVE;
         } else if (strncmp(ptr, "uci", 3) == 0) {
             app->mode = IUCI;
@@ -502,7 +513,14 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
             pertf_runtests();
         } else if (strncmp(ptr, "help", 4) == 0) {
         } else {
-            printf("ace: received command `%s'\n", ptr);
+            /* maybe this is a move */
+            if ((m = process_algebraic(app->board, sz, len, app->board->side))) {
+                do_move(app->board, &app->ul, m);
+            } else if ((m = process_long_notation(app->board, sz, len, app->board->side))) {
+                do_move(app->board, &app->ul, m);
+            } else {
+                return FALSE;
+            }
         }
     }
 
