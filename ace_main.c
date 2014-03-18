@@ -26,11 +26,7 @@
 #include "ace_zobrist.h"
 #include "ace_magic.h"
 
-#ifndef _DEBUG
 int main(int argc, char **argv)
-#else
-int main2(int argc, char **argv)
-#endif
 {
 	int i = 0, c;
 	char buf[256];

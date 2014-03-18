@@ -92,6 +92,8 @@ void print_board(const board_t* b)
 			}
 		} else if (r == R5) {
 			printf("  %s", castles[b->castle]);
+		} else if (r == R4) {
+			printf("  %d / %d", b->half, b->moves);
 		}
 
 		printf("\n");
@@ -118,16 +120,13 @@ void print_algebraic(const board_t* b, const move_t move)
 
 	piece = b->pos.squares[from];
 
-	if (kind == CAPTURE) {
+	if ((kind == CAPTURE) || (kind == EP_CAPTURE)) {
 		if (piece_type(piece) == PAWN) {
 			printf("%cx%c%c", files[file(from)], files[file(to)], ranks[rank(to)]);
 		} else {
 			printf("%cx%c%c", pieces[piece_color(piece)][piece_type(piece)],
 				files[file(to)], ranks[rank(to)]);
 		}
-	} else if (kind == EP_CAPTURE) {
-		assert(piece_type(piece) == PAWN);
-		printf("%cx%c%ce.p.", files[file(from)], files[file(to)], ranks[rank(to)]);
 	} else if (is_promotion(kind)) {
 		assert(piece_type(piece) == PAWN);
 		printf("%c%c=%c", files[file(to)], ranks[rank(to)],

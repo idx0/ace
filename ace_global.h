@@ -62,7 +62,10 @@ extern u8 castle_permission[64];
 extern board_rank_t pawn_enpas_rank[2]; 
 extern board_rank_t pawn_double_rank[2];
 extern piece_type_t promoted_type[4];
+/* piece material values */
 extern int piece_material_values[6];
+/* mate value */
+#define MATE 99999
 /* piece-square tables */
 extern int pawn_pcsq[64];
 extern int knight_pcsq[64];
@@ -77,6 +80,9 @@ extern int pawn_isolated[64];
 extern int pawn_score_isolated;
 extern int pawn_score_passed[8];
 extern int pawn_score_backward[8];
+/* LvvMva array */
+extern int move_score_mvvlva[6][6];
+extern int move_score_special[16];
 #ifdef CALCULATE_RAYS
 /* These bitboards are the "rays" used to move rooks, bishops, and queens.
    When generating the actual moves these pieces can make, we draw a ray in
@@ -182,6 +188,12 @@ extern void do_null_move(board_t* board, undolist_t* ul);
 extern void undo_null_move(board_t* board, undolist_t* ul);
 
 /**
+ * Checks if the king for side color s is in check
+ * @return TRUE if check, FALSE otherwise
+ */
+extern int check(const board_t* board, const side_color_t s);
+
+/**
  * Performs a perft test to the given depth
  * @param board The board structure
  * @param ul The undolist history for this match
@@ -191,6 +203,11 @@ extern void undo_null_move(board_t* board, undolist_t* ul);
 extern u64 perft(board_t* board, undolist_t* ul, int depth);
 extern void perft_kiwipete();
 extern void pertf_runtests();
+
+/**
+ *
+ */
+extern int evaluate(board_t* board);
 
 /**
  * Processes a move in algebraic notation from user input
@@ -238,3 +255,9 @@ extern int process_command(app_t *app, char *sz, size_t len);
  * @return TRUE if input is ready, FALSE otherwise
  */
 extern int input_ready();
+
+void store_hash(hash_table_t *table, board_t *board, const move_t move,
+                int score, int flags, int depth);
+
+int probe_hash(hash_table_t *table, board_t *board, move_t *outmove,
+               int *outscore, int depth, int alpha, int beta);

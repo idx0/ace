@@ -29,7 +29,7 @@
 #include "ace_magic.h"
 
 #ifdef _DEBUG
-int main(int argc, const char **argv)
+int main2(int argc, const char **argv)
 {
 	fen_state_t fen;
 	ms_time_t tm_before, tm_after;

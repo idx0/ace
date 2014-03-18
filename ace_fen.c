@@ -302,7 +302,7 @@ static int parse_moves(fen_state_t *fen, const char *str, size_t len)
 	int ret, plies, moves;
 	int rc = FEN_SUCCESS;
 
-	fen->board->plies = 0;
+	fen->board->half = 0;
 	fen->board->moves = 1;
 
 	if (fen->read_pos < len) {
@@ -314,7 +314,7 @@ static int parse_moves(fen_state_t *fen, const char *str, size_t len)
 			} else if (moves <= 0) {
 				rc = ERROR_FEN_INVALID_MOVE;
 			} else {
-				fen->board->plies = plies;
+				fen->board->half = plies;
 				fen->board->moves = moves;
 			}
 		} else {

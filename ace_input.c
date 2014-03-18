@@ -153,7 +153,7 @@ move_t process_algebraic(board_t* board, const char *sz,
     	if (isfile(c)) {
     		if (move_think == TBEGIN) {
     			move_think = TPAWN;
-    		} else if (move_think != TPAWNCAP) {
+    		} else if (dest_file != 0) {
                 move_think = TERROR;
             }
     		dest_file = (c - 'a');
@@ -169,6 +169,7 @@ move_t process_algebraic(board_t* board, const char *sz,
     			move_think = TCAP;
     		} else if (move_think == TPAWN) {
     			src_file = dest_file;
+                dest_file = 0;
     			move_think = TPAWNCAP;
     		} else {
     			move_think = TERROR;
@@ -270,7 +271,7 @@ move_t process_algebraic(board_t* board, const char *sz,
     }
 
     /* if we couldn't generate a move, return */
-    if (!output) return 0;
+    if (!output) return 0;  
 
     /* finally, check if the move we think we made is in our move list */
     ul.count = 0;
@@ -432,12 +433,12 @@ int input_ready()
 
     if (!init) {
         init = 1;
-        h = GetStdHandle(STD_INPUT_HANDLE)
+        h = GetStdHandle(STD_INPUT_HANDLE);
         pipe = !GetConsoleMode(h, &dw);
 
         if (!pipe) {
             SetConsoleMode(h, dw & ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT));
-            FlushConsoleInputBuffer(inh);
+            FlushConsoleInputBuffer(h);
         }
     }
 

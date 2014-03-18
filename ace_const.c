@@ -116,6 +116,24 @@ int king_endgame_pcsq[64] = {
 	 0,  10,  20,  30,  30,  20,  10,   0
 };
 
+int move_score_mvvlva[6][6] = {
+	{ 10105, 10205, 10305, 10305, 10505, 10605 },
+	{ 10104, 10204, 10304, 10304, 10504, 10604 },
+	{ 10103, 10203, 10303, 10303, 10503, 10603 },
+	{ 10102, 10202, 10302, 10302, 10502, 10602 },
+	{ 10101, 10201, 10301, 10301, 10501, 10601 },
+	{ 10100, 10200, 10300, 10300, 10500, 10600 }
+};
+
+/* move scores for certain special moves (en passant captures, castles, and
+   promotions are non-zero */
+int move_score_special[16] = {
+	0, 0, 10050, 10050, 0, 10105, 0, 0,
+	/* I am explicitly not weights a pawn capture + promotion higher than a
+	   normal pawn capture - this has not been verified experimentally */
+	10010, 10020, 10030, 10040, 10205, 10305, 10405, 10505
+};
+
 u64 board_colors = 0x55aa55aa55aa55aaULL;
 
 int pawn_score_isolated = -10;

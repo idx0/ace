@@ -101,6 +101,21 @@ typedef u16 move_t;
 typedef u32 move_ext_t;
 
 /* the move kind is stored in the upper 4 bits of the u16 */
+/*  0 0 0 0 quiet
+    0 0 0 1 double pawn
+    0 0 1 0 king castle
+    0 0 1 1 queen castle
+    0 1 0 0 capture
+    0 1 0 1 ep capture
+    1 0 0 0 knight promotion
+    1 0 0 1 bishop promotion
+    1 0 1 0 rook promotion
+    1 0 1 1 queen promotion
+    1 1 0 0 knight promotion via capture
+    1 1 0 1 bishop promotion via capture
+    1 1 1 0 rook promotion via capture
+    1 1 1 1 queen promotion via capture
+*/
 enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
 				 CAPTURE, EP_CAPTURE, KNIGHT_PROMO = 8, BISHOP_PROMO,
 				 ROOK_PROMO, QUEEN_PROMO, KNIGHT_PROMO_CAP,
@@ -112,6 +127,7 @@ enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
 #define move_kind(m) (((m) & 0xf000) >> 12)
 
 #define is_promotion(m) (move_kind(m) & 0x08)
+#define is_capture(m) (move_kind(m) & 0x04)
 #define to_move(f, t, k) (((f) & 0x3f) | (((t) & 0x3f) << 6) | (((k) & 0x0f) << 12))
 
 /* these macros return a bitboard with all bits set above and below the given bit */
@@ -130,6 +146,7 @@ enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
 /* move list */
 typedef struct movelist {
 	move_t moves[MAX_MOVES];
+	int scores[MAX_MOVES];
 	u16 count;
 } movelist_t;
 
@@ -138,7 +155,7 @@ typedef struct undo_record {
 	move_t move;		/* the move made */
 	u8 castle;			/* castling permissions prior to move */
 	u8 enpas;			/* en passant square prior to move */
-	u32 plies;			/* fifty move count prior to move */
+	u32 ply;			/* fifty move count prior to move */
 	piece_t capture;	/* piece captured by move */
 	u64 key;			/* hash key of board prior to move */
 } undo_record_t;
@@ -170,37 +187,87 @@ typedef struct position {
 	u64 occ[2];
 } position_t;
 
+#define HASH_NONE	0
+#define HASH_ALPHA	1
+#define HASH_BETA	2
+#define HASH_EXACT	4
+
+typedef struct hash_record {
+	u64 key;		/* the position hash key for this entry */
+	move_t move;	/* the move that was made to achieve this entry */
+	int score;		/* the evaluation score for this entry */
+	int depth;		/* the depth at which this entry was found */
+	u32 flags;		/* the flags for this entry */
+} hash_record_t;
+
+typedef struct hash_table {
+	hash_record_t *record;
+	int entries;
+	int overwritten;
+	int hit;
+	int cut;
+	u32 size;
+} hash_table_t;
+
+#define SEARCH_MAXDEPTH	64
+
 /* board structure */
 typedef struct board {
+	/* borad position definitions */
 	position_t pos;
-
-	/* number of moves and half-moves (half-moves are respective of 50 move
-	   rule) */
-	u32 plies;
-	u32 moves;
-
 	/* half move count of current search */
-	u32 search_ply;
-
+	u32 ply;
+	/* game half moves */
+	u32 half;
+	/* game full moves */
+	u32 moves;
 	/* the en passant square */
 	u8 enpas;
-
 	/* side color */
 	side_color_t side;
-
 	/* side castling permissions as a bit mask */
 	u8 castle;
-
 	/* zobrist hash key */
 	u64 key;
+	/* move ordering variables */
+	int killers[2][SEARCH_MAXDEPTH];
+	int history[2][6][64];
 } board_t;
 
 typedef enum input_mode { IACE, IUCI, IXBOARD, IMOVE, IFEN } input_mode_t;
 
-typedef struct ace_app {
-	board_t* board;
-	undolist_t ul;
+#define SEARCH_DEPTH	1
+#define SEARCH_TIMED	2
+#define SEARCH_STOPPED	4
+#define SEARCH_PONDER	8
+#define SEARCH_INFINITE	16
+#define SEARCH_NULL		32
 
+typedef struct searchdata {
+	/* start and end times */
+	ms_time_t start;
+	ms_time_t end;
+	/* depth */
+	int depth;
+	/* moves remaining */
+	int movesleft;
+	/* number of nodes visited */
+	u64 nodes;
+	/* search flags for this search */
+	u32 flags;
+} searchdata_t;
+
+typedef struct ace_app {
+	/* the board, allocated by the application */
+	board_t* board;
+	/* the global undo list for all moves made by the application */
+	undolist_t ul;
+	/* true if the application should quit */
 	int quit;
+	/* the current input mode */
 	input_mode_t mode;
+	/* search data for this app */
+	searchdata_t search;
+	/* application wide transposition table */
+	hash_table_t hash;
 } app_t;
