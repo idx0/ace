@@ -341,8 +341,17 @@ void init_app(app_t *app)
 	}
 
 	/* 16 mb hash to start */
-	init_hash(&app->hash, 16);
+	init_hash(&app->hash, 256);
 
 	/* clear search info */
 	memset(&app->search, 0, sizeof(searchdata_t));
+}
+
+
+void destroy_app(app_t *app)
+{
+	assert(app);
+
+	free(app->board);
+	free(app->hash.record);
 }

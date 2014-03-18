@@ -87,7 +87,7 @@ void store_hash(hash_table_t *table, board_t *board, const move_t move,
 	if ((MATE - abs(score)) <= SEARCH_MAXDEPTH) score = (score < 0 ? -1 : 1) * MATE;
 
 	/* check if this entry is at a depth >= the depth already stored */
-	/*if (depth >= table->record[i].depth) */ {
+	if (depth >= table->record[i].depth) {
 		if (table->record[i].key != 0) {
 			table->overwritten++;
 		} else {

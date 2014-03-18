@@ -117,6 +117,7 @@ u64* ray_list[8];
  */
 extern void init_movelists();
 extern void init_app(app_t *app);
+extern void destroy_app(app_t *app);
 /* Returns a bitboard representing all the squares attacked by side s.  This 
  * does not include the pawn who made an en passant move.
  * @param board The board structure

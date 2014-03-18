@@ -219,6 +219,8 @@ static int print_pv(app_t *app, int depth)
 	assert(app);
 	assert(app->board);
 
+#define VIA_PROBE
+#ifdef VIA_PROBE
 	/* get the current position */
 	mv = probe_hash_move(&app->hash, app->board->key);
 	
@@ -242,6 +244,25 @@ static int print_pv(app_t *app, int depth)
 
 		mv = probe_hash_move(&app->hash, app->board->key);
 	}
+#else
+	while (app->search.pv[count]) {
+		mv = app->search.pv[count++];
+		
+		if (find_move(app, mv)) {
+			from = move_from(mv);
+			p = app->board->pos.squares[from];
+
+			if (do_move(app->board, &app->ul, mv)) {
+				print_algebraic(p, mv);
+				printf(" ");
+			} else {
+				break;
+			}
+		} else {
+			break;
+		}
+	}
+#endif
 	
 	while(app->board->ply) {
 		undo_move(app->board, &app->ul);

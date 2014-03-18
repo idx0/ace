@@ -476,6 +476,32 @@ static int is_shorthand(const char *ptr, size_t len, char match)
 }
 
 
+static int command_info(app_t *app)
+{
+    static const char delim[] = " \t\r\n";
+    char *ptr;
+    size_t cmdlen;
+    ptr = strtok(NULL, delim);
+
+    if (ptr) {
+        cmdlen = strlen(ptr);
+
+        if (strncmp(ptr, "hash", 4) == 0) {
+            printf("hash table -----\n");
+            printf("  record ptr=     %p\n", app->hash.record);
+            printf("  entries=        %d\n", app->hash.entries);
+            printf("  overwrites=     %d\n", app->hash.overwritten);
+            printf("  hits=           %d\n", app->hash.hit);
+            printf("  hits w/ cutoff= %d\n", app->hash.cut);
+            printf("  size (mb)=      %d\n", (1 << app->hash.size) / (1024 * 1024));
+            printf("  size (records)= %d\n", app->hash.exist);
+        }
+    }
+
+    return TRUE;
+}
+
+
 static int process_ace_command(app_t *app, char *sz, size_t len)
 {
     static const char delim[] = " \t\r\n";
@@ -513,8 +539,15 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
             printf("-----\n");
             pertf_runtests();
         } else if (strncmp(ptr, "think", 5) == 0) {
-            app->search.depth = 8;
-            think(app);
+            ptr = strtok(NULL, delim);
+            if (ptr) {
+                app->search.depth = atoi(ptr);
+                if (app->search.depth >= SEARCH_MAXDEPTH)
+                    app->search.depth = SEARCH_MAXDEPTH - 1;
+                think(app);
+            }
+        } else if (strncmp(ptr, "info", 4) == 0) {
+            return command_info(app);
         } else if (strncmp(ptr, "help", 4) == 0) {
         } else {
             /* maybe this is a move */
