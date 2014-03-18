@@ -103,22 +103,17 @@ void print_board(const board_t* b)
 }
 
 
-void print_algebraic(const board_t* b, const move_t move)
+void print_algebraic(const piece_t piece, const move_t move)
 {
 	u32 to = move_to(move);
 	u32 from = move_from(move);
 	u8 kind = move_kind(move);
-	piece_t piece;
 	const char pieces[2][6] = {
 		{ 'P', 'N', 'B', 'R', 'Q', 'K' },
-		{ 'p', 'n', 'b', 'r', 'q', 'k' }
+		{ 'P', 'N', 'B', 'R', 'Q', 'K' }
 	};
 	const char ranks[8] = { '1', '2', '3', '4', '5', '6', '7', '8' };
 	const char files[8] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
-
-	assert(b);
-
-	piece = b->pos.squares[from];
 
 	if ((kind == CAPTURE) || (kind == EP_CAPTURE)) {
 		if (piece_type(piece) == PAWN) {

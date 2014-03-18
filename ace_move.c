@@ -43,7 +43,8 @@ static void add_quiet_move(const board_t *board, const u64 bboard,
 		/* otherwise, use the value from the history */
 		else {
 			p = board->pos.squares[from];
-			ml->scores[ml->count] = board->history[piece_color(p)][piece_type(p)][to];
+			ml->scores[ml->count] = 
+				board->history[piece_color(p)][piece_type(p)][to] & 0x1fff;
 		}
 
 		ml->count++;
@@ -608,6 +609,7 @@ int do_move(board_t* board, undolist_t* ul, const move_t move)
 	ul->undo[ul->count].ply = board->half;
 
 	board->half++;
+	board->ply++;
 	ul->count++;
 
 	/* finally, move the piece */
@@ -652,6 +654,7 @@ void undo_move(board_t* board, undolist_t* ul)
 	assert(ul);
 
 	ul->count--;
+	board->ply--;
 
 	from = move_from(ul->undo[ul->count].move);
 	to = move_to(ul->undo[ul->count].move);
@@ -731,6 +734,7 @@ void do_null_move(board_t* board, undolist_t* ul)
 	board->enpas = INVALID_SQUARE;
 
 	ul->count++;
+	board->ply++;
 	board->moves++;
 
 	/* flip the side */
@@ -751,6 +755,7 @@ void undo_null_move(board_t* board, undolist_t* ul)
 	oc = (~board->side & 0x01);
 
 	ul->count--;
+	board->ply--;
 	board->moves--;
 
 	board->castle = ul->undo[ul->count].castle;

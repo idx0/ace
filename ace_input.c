@@ -512,6 +512,9 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
             perft_kiwipete();
             printf("-----\n");
             pertf_runtests();
+        } else if (strncmp(ptr, "think", 5) == 0) {
+            app->search.depth = 8;
+            think(app);
         } else if (strncmp(ptr, "help", 4) == 0) {
         } else {
             /* maybe this is a move */

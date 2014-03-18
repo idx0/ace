@@ -320,30 +320,6 @@ void init_movelists()
 }
 
 
-void get_current_tick(ms_time_t* t)
-{
-	assert(t);
-#ifdef ACE_WINDOWS
-	t->time = GetTickCount64();
-#else
-	gettimeofday(&t->time, NULL);
-#endif
-}
-
-
-u64 get_interval(const ms_time_t *then, const ms_time_t* now)
-{
-	assert(then);
-	assert(now);
-#ifdef ACE_WINDOWS
-	return (now->time - then->time);
-#else
-	return ((now->time.tv_sec - then->time.tv_sec) * 1000) +
-			((now->time.tv_usec - then->time.tv_usec) / 1000);
-#endif
-}
-
-
 void init_app(app_t *app)
 {
 	fen_state_t fen;
@@ -363,4 +339,10 @@ void init_app(app_t *app)
 		fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
 		fen_destroy(&fen);
 	}
+
+	/* 16 mb hash to start */
+	init_hash(&app->hash, 16);
+
+	/* clear search info */
+	memset(&app->search, 0, sizeof(searchdata_t));
 }

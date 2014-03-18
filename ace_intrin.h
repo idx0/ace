@@ -26,11 +26,14 @@
 
 #if defined (__GNUC__)
   /* GCC or Equivalent */
-# define ALIGN64 __attribute__((aligned(64)))
+# define ALIGN64 __attribute__((aligned(8)))
+# define ALIGN32 __attribute__((aligned(4)))
 # define FORCE_INLINE __attribute__((always_inline))
   typedef uint64_t u64;
   typedef uint32_t u32;
   typedef uint16_t u16;
+  typedef int32_t  s32;
+  typedef int16_t  s16;
 # define ACE_MSB64(x) (63 - (u32)__builtin_clzll(x))
 # define ACE_LSB64(x) ((u32)__builtin_ctzll(x))
 # define ACE_POPCNT64(x) ((u32)__builtin_popcountll(x))
@@ -39,11 +42,14 @@
   /* TODO */
 #elif defined (_MSC_VER)
   /* MSVC */
-# define ALIGN64 __declspec(align(64))
+# define ALIGN64 __declspec(align(8))
+# define ALIGN32 __declspec(align(4))
 # define FORCE_INLINE __forceinline
   typedef unsigned __int64 u64;
   typedef unsigned __int32 u32;
   typedef unsigned __int16 u16;
+  typedef __int32          s32;
+  typedef __int16          s16;
 # ifdef ACE_X86
 #  ifdef ACE_WIN64
 #   pragma intrinsic(_BitScanForward64)
@@ -100,3 +106,22 @@
 #endif
 
 typedef unsigned char u8;
+
+#include <stdlib.h>
+
+extern void *xmalloc(size_t sz, size_t align);
+
+#ifdef ACE_WINDOWS
+typedef struct ms_time {
+  u64 time;
+} ms_time_t;
+#else
+#include <sys/time.h>
+typedef struct ms_time {
+  struct timeval time;
+} ms_time_t;
+#endif
+
+extern void get_current_tick(ms_time_t* t);
+
+extern u64 get_interval(const ms_time_t *then, const ms_time_t* now);

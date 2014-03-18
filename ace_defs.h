@@ -59,4 +59,4 @@
 #define ACE_DESC	"Another Chess Engine"
 #define ACE_AUTHOR	"Stephen Schweizer"
 #define ACE_EMAIL	"<code@theindexzero.com>"
-#define ACE_VERSION	"0.650"
+#define ACE_VERSION	"0.780"

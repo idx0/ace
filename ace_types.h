@@ -28,20 +28,6 @@
 #define FALSE	0
 #endif
 
-#ifdef ACE_WINDOWS
-typedef struct ms_time {
-	u64 time;
-} ms_time_t;
-#else
-#include <sys/time.h>
-typedef struct ms_time {
-	struct timeval time;
-} ms_time_t;
-#endif
-
-extern void get_current_tick(ms_time_t* t);
-extern u64 get_interval(const ms_time_t *then, const ms_time_t* now);
-
 /* piece definition: piece type */
 typedef enum piece_type { PAWN = 0, KNIGHT, BISHOP, ROOK, QUEEN, KING } piece_type_t;
 
@@ -140,6 +126,8 @@ enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
 #define ls1b_below(x) (~(x) & ((x) - 1))
 #define ls1b_with(x)  ((x) ^ ((x) - 1))
 
+#define get_sign(x, s) (((x) & (1 << (s - 1))) < 0 ? -1 : 1)
+
 #define MAX_MOVES 256
 #define MAX_HISTORY 2048
 
@@ -192,21 +180,39 @@ typedef struct position {
 #define HASH_BETA	2
 #define HASH_EXACT	4
 
+/**
+ * 128 bit hash entry
+ *   8 byte key
+ *   2 byte move
+ *   2 byte score
+ *   1 byte age
+ *   2 byte depth (max is 64 so this should be fine)
+ *   1 byte flag
+ */
 typedef struct hash_record {
 	u64 key;		/* the position hash key for this entry */
-	move_t move;	/* the move that was made to achieve this entry */
-	int score;		/* the evaluation score for this entry */
-	int depth;		/* the depth at which this entry was found */
-	u32 flags;		/* the flags for this entry */
+	u64 move  : 16;	/* the move that was made to achieve this entry */
+	u64 score : 16;	/* the evaluation score for this entry */
+	u64 age   : 8;	/* the age of this hash record (in searches) */
+	u64 depth : 16;	/* the depth at which this entry was found */
+	u64 flags : 8;	/* the flags for this entry */
 } hash_record_t;
 
 typedef struct hash_table {
+	/* A pointer to the aligned memory hash table */
 	hash_record_t *record;
+	/* The number of entries in the table */
 	int entries;
+	/* The number of entries overwritten during search */
 	int overwritten;
-	int hit;
-	int cut;
+	/* The number of hash hits */
+	u32 hit;
+	/* The number of hash hits that cause a branch cutoff */
+	u32 cut;
+	/* The size of the has table as a power of 2 */
 	u32 size;
+	/* The total number of hash record entries existing in the table */
+	u32 exist;
 } hash_table_t;
 
 #define SEARCH_MAXDEPTH	64
@@ -216,6 +222,9 @@ typedef struct board {
 	/* borad position definitions */
 	position_t pos;
 	/* half move count of current search */
+	/* note: this is, in most cases, equal to the depth of the search.  For
+	   searches using a single undo list, this should alway be equal to
+	   undolist_t::count */
 	u32 ply;
 	/* game half moves */
 	u32 half;
@@ -255,6 +264,8 @@ typedef struct searchdata {
 	u64 nodes;
 	/* search flags for this search */
 	u32 flags;
+	/* pv line for this search */
+	move_t pv[SEARCH_MAXDEPTH];
 } searchdata_t;
 
 typedef struct ace_app {

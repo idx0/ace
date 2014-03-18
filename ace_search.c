@@ -18,10 +18,13 @@
 
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "ace_intrin.h"
 #include "ace_types.h"
 #include "ace_global.h"
+#include "ace_display.h"
+
 
 static int repetitions(const app_t *app)
 {
@@ -74,18 +77,17 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 	int i, score = -MATE, highest = -MATE;
 	int checked;
 	movelist_t ml;
-	move_t best, cutoff = 0;
+	move_t best = 0, cutoff = 0;
 	piece_t p;
 
 	assert(app);
 
+	app->search.nodes++;
+
 	/* recursive base */
 	if (depth == 0) {
-		app->search.nodes++;
 		return evaluate(app->board);
 	}
-
-	app->search.nodes++;
 
 	/* draws */
 	if (repetitions(app) || (app->board->half >= 100)) {
@@ -104,22 +106,26 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 	}
 
 	/* probe our table */
-	if (probe_hash(&app->hash, app->board, &cutoff, &score, alpha, beta, depth) == TRUE) {
+	if (probe_hash(&app->hash, app->board, &cutoff, &score, depth, alpha, beta) == TRUE) {
 		app->hash.cut++;
 		return score;
 	}
 
+	/* generate moves */
+	generate_moves(app->board, &ml);
+
+	/* reset score */
+	score = -MATE;
+
+	/* try to match our cutoff move */
 	if (cutoff != 0) {
 		for (i = 0; i < ml.count; i++) {
 			if (ml.moves[i] == cutoff) {
-				ml.scores[i] == 20000;
+				ml.scores[i] = 20000;
 				break;
 			}
 		}
 	}
-
-	/* generate moves */
-	generate_moves(app->board, &ml);
 
 	/* search negamax */
 	for (i = 0; i < ml.count; i++) {
@@ -189,6 +195,62 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 }
 
 
+static int find_move(app_t *app, move_t m)
+{
+	int i;
+	movelist_t ml;
+	generate_moves(app->board, &ml);
+
+	for (i = 0; i < ml.count; i++) {
+		if (ml.moves[i] == m) return TRUE;
+	}
+
+	return FALSE;
+}
+
+
+static int print_pv(app_t *app, int depth)
+{
+	int count = 0;
+	piece_t p;
+	u8 from;
+	move_t mv;
+
+	assert(app);
+	assert(app->board);
+
+	/* get the current position */
+	mv = probe_hash_move(&app->hash, app->board->key);
+	
+	while ((mv != 0) && (count < depth)) {
+		
+		if (find_move(app, mv)) {
+			from = move_from(mv);
+			p = app->board->pos.squares[from];
+
+			if (do_move(app->board, &app->ul, mv)) {
+				app->search.pv[count++] = mv;
+
+				print_algebraic(p, mv);
+				printf(" ");
+			} else {
+				break;
+			}
+		} else {
+			break;
+		}
+
+		mv = probe_hash_move(&app->hash, app->board->key);
+	}
+	
+	while(app->board->ply) {
+		undo_move(app->board, &app->ul);
+	}
+	
+	return count;
+}
+
+
 /**
  * The search is controlled by the think() function.  This function initializes
  * all variables needed for search, sets up thread pools, and then performs a
@@ -211,8 +273,9 @@ void think(app_t *app)
 	app->search.flags &= ~SEARCH_STOPPED;
 
 	/* clear search heuristics */
-	memset(&app->board->killers, 0, 2 * SEARCH_MAXDEPTH * sizeof(int));
-	memset(&app->board->history, 0, 2 * 6 * 64 * sizeof(int));
+	memset(app->search.pv, 0, SEARCH_MAXDEPTH * sizeof(move_t));
+	memset(app->board->killers, 0, 2 * SEARCH_MAXDEPTH * sizeof(int));
+	memset(app->board->history, 0, 2 * 6 * 64 * sizeof(int));
 
 	/* set the start time */
 	get_current_tick(&app->search.start);
@@ -220,5 +283,9 @@ void think(app_t *app)
 	/* iterative deepening */
 	for (i = 1; i < app->search.depth; i++) {
 		val = alpha_beta(app, -MATE, MATE, i);
+
+		printf("depth %d ", i);
+		print_pv(app, i);
+		printf("\n");
 	}
 }

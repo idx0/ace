@@ -2,6 +2,7 @@ CC := gcc
 CFLAGS := -Wall -Wunused -Wno-format
 
 OBJS := \
+	ace_util.o \
 	ace_fen.o \
 	ace_display.o \
 	ace_init.o \
@@ -12,6 +13,7 @@ OBJS := \
 	ace_input.o \
 	ace_evaluate.o \
 	ace_search.o \
+	ace_hash.o \
 	ace_thread.o \
 	ace_perft.o
 

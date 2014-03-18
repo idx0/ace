@@ -115,8 +115,14 @@ int evaluate(board_t* board)
 
 	/* evaluate pieces */
 	for (c = 0; c < 2; c++) {
-		score += sign[c] * evaluate_pawns(board, c);
+/*		score += sign[c] * evaluate_pawns(board, c); */
 	}
 
-	return score;
+
+
+	if (board->side == WHITE) {
+		return score;
+	} else {
+		return -score;
+	}
 }

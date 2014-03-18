@@ -23,3 +23,23 @@ Search:
  - Null-move forward pruning
  - Search extensions
  - Iterative deepending & aspiration windows
+
+
+Move Scoring:
+-----
+Moves are scored using a variety of techniques.  The most apparent is MvvLva,
+which scores moves based on their capture ranking (PxQ being the best, QxP being
+the worst).  However, killer moves (those which cause a beta cutoff) and history
+moves (those which improve alpha) are also recorded.  Finally, there is extra
+value added for the type of move.  For example, a castle is better than a quiet
+move.  Quiet pawn promotion is also rewarded.  The breakdown looks as follows:
+
+	0 - 8191	history scores
+	9000+		killer moves
+	10000+		special moves & captures
+	20000		branch cutoffs via transposition table
+
+I hope to add SEE somewhere into this formula, probably from 15000 onward.
+
+These values are assigned to moves during move generation (or during search for
+transposition table hits).  In order to order moves during search.

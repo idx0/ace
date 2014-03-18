@@ -65,7 +65,7 @@ extern piece_type_t promoted_type[4];
 /* piece material values */
 extern int piece_material_values[6];
 /* mate value */
-#define MATE 99999
+#define MATE 32768
 /* piece-square tables */
 extern int pawn_pcsq[64];
 extern int knight_pcsq[64];
@@ -210,6 +210,11 @@ extern void pertf_runtests();
 extern int evaluate(board_t* board);
 
 /**
+ *
+ */
+extern void think(app_t *app);
+
+/**
  * Processes a move in algebraic notation from user input
  * @param board The board structure
  * @param sz The input string
@@ -256,8 +261,10 @@ extern int process_command(app_t *app, char *sz, size_t len);
  */
 extern int input_ready();
 
-void store_hash(hash_table_t *table, board_t *board, const move_t move,
-                int score, int flags, int depth);
+extern void init_hash(hash_table_t *table, u16 mb);
+extern void store_hash(hash_table_t *table, board_t *board, const move_t move,
+                       int score, int flags, int depth);
 
-int probe_hash(hash_table_t *table, board_t *board, move_t *outmove,
-               int *outscore, int depth, int alpha, int beta);
+extern int probe_hash(hash_table_t *table, board_t *board, move_t *outmove,
+                      int *outscore, int depth, int alpha, int beta);
+extern move_t probe_hash_move(hash_table_t *table, u64 boardkey);

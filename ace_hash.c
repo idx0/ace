@@ -17,45 +17,98 @@
  */
 
 #include <assert.h>
+#include <string.h>
 
 #include "ace_intrin.h"
 #include "ace_types.h"
 #include "ace_global.h"
 
+
+static void clear_hash(hash_table_t *table)
+{
+	u32 i, size = 0;
+
+	assert(table);
+
+	size = (1 << table->size) / sizeof(hash_record_t);
+
+	for (i = 0; i < size; i++) {
+		memset(&table->record[i], 0, sizeof(hash_record_t));
+	}
+}
+
+
 void init_hash(hash_table_t *table, u16 mb)
 {
+	u32 size = 0;
 
+	u8 bits = ((mb & 0x00ff) ? bitscan_8bit[mb & 0x00ff] :
+							   bitscan_8bit[(mb >> 8) & 0x00ff] + 8);
+
+	assert(table);
+
+	table->entries = 0;
+	table->overwritten = 0;
+	table->hit = 0;
+	table->cut = 0;
+	table->size = 20 + bits;
+
+	if (table->size > 31) { table->size = 31; }
+
+	size = (1 << table->size);
+	table->exist = size / sizeof(hash_record_t);
+
+	/* try to align our table, whose record length is 16 bytes, on a 16 byte
+	   boundary */
+	table->record = (hash_record_t *)xmalloc(size, 16);
+
+	assert(table->record);
+
+	clear_hash(table);
 }
 
 
 void store_hash(hash_table_t *table, board_t *board, const move_t move,
 				int score, int flags, int depth)
 {
-	u32 i;
+	u32 i, mask;
 
 	assert(table);
 	assert(board);
 
-	i = board->key & table->size;
+	mask = table->exist - 1;
+	i = board->key & mask;
 
-	if (table->record[i].key != 0) {
-		table->overwritten++;
+	/* If we are adding a hash that is within SEARCH_MAXDEPTH of MATE, then we
+	   need to simply store MATE.  This is so that when we probe the table, we
+	   can convert from MATE to MATE - (the current ply) invariant of the ply
+	   this entry was stored at.  Plus we already know this ply (since it is
+	   our depth value) */
+	if ((MATE - abs(score)) <= SEARCH_MAXDEPTH) score = (score < 0 ? -1 : 1) * MATE;
+
+	/* check if this entry is at a depth >= the depth already stored */
+	/*if (depth >= table->record[i].depth) */ {
+		if (table->record[i].key != 0) {
+			table->overwritten++;
+		} else {
+			table->entries++;
+		}
+
+		table->record[i].move = move;
+		table->record[i].key = board->key;
+		table->record[i].flags = flags;
+		table->record[i].score = score;
+		table->record[i].depth = (u16)depth;
+		table->record[i].age = 1;
 	}
-
-	table->entries++;
-
-	table->record[i].move = move;
-	table->record[i].key = board->key;
-	table->record[i].flags = flags;
-	table->record[i].score = score;
-	table->record[i].depth = depth;
 }
 
 
 int probe_hash(hash_table_t *table, board_t *board, move_t *outmove, int *outscore,
 			   int depth, int alpha, int beta)
 {
-	hash_record_t *rec = &table->record[board->key & table->size];
+	u32 mask = table->exist - 1;
+	hash_record_t *rec = &table->record[board->key & mask];
 
 	assert(outmove);
 	assert(outscore);
@@ -68,6 +121,12 @@ int probe_hash(hash_table_t *table, board_t *board, move_t *outmove, int *outsco
 
 			*outscore = rec->score;
 
+			/* if the recorded score is MATE, return MATE +- ply */
+			if (abs(rec->score) == MATE) {
+				*outscore -= get_sign(rec->score, 16) * board->ply;
+			}
+
+			/* check for our return */
 			if (rec->flags & HASH_ALPHA) {
 				if (rec->score <= alpha) {
 					*outscore = alpha;
@@ -85,4 +144,17 @@ int probe_hash(hash_table_t *table, board_t *board, move_t *outmove, int *outsco
 	}
 
 	return FALSE;
+}
+
+
+move_t probe_hash_move(hash_table_t *table, u64 boardkey)
+{
+	u32 mask = table->exist - 1;
+	hash_record_t *rec = &table->record[boardkey & mask];
+
+	if (rec->key == boardkey) {
+		return rec->move;
+	}
+
+	return 0;
 }
