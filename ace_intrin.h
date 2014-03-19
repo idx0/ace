@@ -108,6 +108,7 @@
 typedef unsigned char u8;
 
 #include <stdlib.h>
+#include <string.h>
 
 /* aligned malloc/free */
 extern void *xmalloc(size_t sz, size_t align);

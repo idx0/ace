@@ -15,6 +15,7 @@ OBJS := \
 	ace_search.o \
 	ace_hash.o \
 	ace_thread.o \
+	ace_uci.o \
 	ace_perft.o
 
 INCLUDES :=

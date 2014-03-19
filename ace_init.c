@@ -322,22 +322,17 @@ void init_movelists()
 
 void init_app(app_t *app)
 {
-	fen_state_t fen;
 	assert(app);
 
 	app->mode = IACE;
 	app->quit = FALSE;
 	app->board = (board_t *)malloc(sizeof(board_t));
-	app->ul.count = 0;
 
 	if (app->board) {
 		memset(app->board, 0, sizeof(board_t));
 		memset(app->board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
 
-		fen_init(&fen);
-		fen_use_ptr(&fen, app->board);
-		fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
-		fen_destroy(&fen);
+		init_startpos(app);
 	}
 
 	/* clear search info */
@@ -349,6 +344,19 @@ void init_app(app_t *app)
 
 	/* 16 mb hash to start */
 	init_hash(&app->hash, 256);
+}
+
+
+void init_startpos(app_t *app)
+{
+	fen_state_t fen;
+	assert(app);
+
+	fen_init(&fen);
+	fen_use_ptr(&fen, app->board);
+	fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
+	fen_destroy(&fen);
+	app->ul.count = 0;
 }
 
 

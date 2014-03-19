@@ -69,14 +69,71 @@ static void init_node(node_t *node)
 {
 	node->flags = 0;
 	node->ml.count = 0;
+	node->cl.count = 0;
 	node->best = 0;
 	node->made = 0;
 }
 
 
-int quiescent(app_t *app, int alpha, int beta)
+int quiescent(app_t *app, cnodeptr_t parent, int alpha, int beta)
 {
-	return 0;
+	int i, score = -MATE;
+	node_t node;
+	int delta = 200;
+
+	init_node(&node);
+
+	assert(app);
+
+	app->search.nodes++;
+
+	/* max depth */
+	if (app->board->ply > (SEARCH_MAXDEPTH - 1)) {
+		return evaluate(app->board);
+	}
+
+	/* draws */
+	if (repetitions(app) || (app->board->half >= 100)) {
+		return 0;
+	}
+
+	score = evaluate(app->board);
+
+	if (score >= beta) return beta;
+	/* delta pruning based on a material value of delta (this should be disabled
+	   in the endgame) */
+	/* The idea here is that, even if our score can improve alpha, it doesn't
+	   improve it by a significant amount, so don't bother searching these nodes */
+	if (score < (alpha - delta)) return alpha;
+	if (score > alpha) alpha = score;
+
+
+	/* generate moves (with separate captures) */
+	generate_moves(app->board, &node.ml, &node.cl);
+
+	for (i = 0; i < node.cl.count; i++) {
+		/* get the next move ordered */
+		next_move(i, &node.cl);
+
+		if (!(do_move(app->board, &app->ul, node.cl.moves[i])))
+			continue;
+
+		score = -quiescent(app, &node, -beta, -alpha);
+
+		node.made++;
+		undo_move(app->board, &app->ul);
+
+		if (score > alpha) {
+			if (score >= beta) {
+				return beta;
+			}
+
+			/* update alpha */
+			alpha = score;
+		}
+	}
+
+	return alpha;
 }
 
 
@@ -94,10 +151,10 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 
 	app->search.nodes++;
 
-
 	/* max depth */
 	if (app->board->ply > (SEARCH_MAXDEPTH - 1)) {
-		return evaluate(app->board);
+		/* return evaluate(app->board); */
+		return quiescent(app, parent, alpha, beta);
 	}
 
 	/* recursive base */
@@ -126,12 +183,12 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 	}
 
 	/* generate moves */
-	generate_moves(app->board, &node.ml);
+	generate_moves(app->board, &node.ml, &node.ml);
 
 	/* reset score */
 	score = -MATE;
 
-	/* try to match our cutoff move */
+	/* try to match our hash hit move */
 	if (cutoff != 0) {
 		for (i = 0; i < node.ml.count; i++) {
 			if (node.ml.moves[i] == cutoff) {
@@ -213,7 +270,7 @@ static int find_move(app_t *app, move_t m)
 {
 	int i;
 	movelist_t ml;
-	generate_moves(app->board, &ml);
+	generate_moves(app->board, &ml, &ml);
 
 	for (i = 0; i < ml.count; i++) {
 		if (ml.moves[i] == m) return TRUE;
@@ -286,6 +343,26 @@ static int print_pv(app_t *app, int depth)
 }
 
 
+static void print_uci_info(app_t *app, int depth, int score)
+{
+	ms_time_t tm;
+	u64 i, s;
+
+	get_current_tick(&tm);
+	i = get_interval(&app->search.start, &tm);
+	s = i / 1000;
+
+	printf("info depth %d score cp %d time %lld nodes %lld nps %lld pv ",
+		depth, score,
+		i, app->search.nodes,
+		/* we are calculating average nps here - to calculate true nps we should
+		   only consider the nodes searched and time interval for this depth */
+		(s != 0 ? app->search.nodes / s : app->search.nodes));
+	print_pv(app, depth);
+	printf("\n");
+}
+
+
 /**
  * The search is controlled by the think() function.  This function initializes
  * all variables needed for search, sets up thread pools, and then performs a
@@ -307,6 +384,7 @@ void think(app_t *app)
 	/* reset our node count board->ply */
 	app->board->ply = 0;
 	app->search.nodes = 0;
+	app->hash.generations++;
 
 	/* clear the stop bit */
 	app->search.flags &= ~SEARCH_STOPPED;
@@ -323,8 +401,8 @@ void think(app_t *app)
 	for (i = 1; i < app->search.depth; i++) {
 		val = alpha_beta(app, &root, -MATE, MATE, i);
 
-		printf("depth %d ", i);
-		print_pv(app, i);
-		printf("\n");
+		if (app->mode == IUCI) {
+			print_uci_info(app, i, val);
+		}
 	}
 }

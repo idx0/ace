@@ -94,18 +94,14 @@ static void add_special_move(const board_t *board, const u64 bboard,
 
 int check(const board_t* board, const side_color_t s)
 {
-	u64 opp;
 	side_color_t oc;
 
 	assert(board);
 	assert(is_valid_index(board->pos.king_sq[s]));
 
 	oc = (~s & 0x01);
-	opp = attacking(board, oc);
 
-	if (board->pos.piece[s][KING] & opp) return TRUE;
-
-	return FALSE;
+	return is_attacked(board, board->pos.king_sq[s], oc);
 }
 
 
@@ -186,7 +182,8 @@ int is_attacked(const board_t* board, const u32 sq, const side_color_t s)
 }
 
 
-static void generate_knight_moves(const board_t* board, movelist_t* ml, const u64 occ)
+static void generate_knight_moves(const board_t* board, movelist_t* ml, 
+								  movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
 	u32 i;
@@ -207,7 +204,7 @@ static void generate_knight_moves(const board_t* board, movelist_t* ml, const u6
 
 		/* add the move from our precomputed move list */
 		add_quiet_move(board, (knight_movelist[i] & ~occ), i, ml);
-		add_capture_move(board, (knight_movelist[i] & board->pos.occ[oc]), i, ml);
+		add_capture_move(board, (knight_movelist[i] & board->pos.occ[oc]), i, cl);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -215,7 +212,8 @@ static void generate_knight_moves(const board_t* board, movelist_t* ml, const u6
 }
 
 
-static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml, const u64 occ)
+static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml, 
+										movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
 	u32 i;
@@ -238,7 +236,7 @@ static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml, co
 		/* add the move as generated from the magic tables */
 		move = magic_bishop(i, occ);
 		add_quiet_move(board, (move & ~occ), i, ml);
-		add_capture_move(board, (move & board->pos.occ[oc]), i, ml);
+		add_capture_move(board, (move & board->pos.occ[oc]), i, cl);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -246,7 +244,8 @@ static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml, co
 }
 
 
-static void generate_rook_queen_moves(const board_t* board, movelist_t* ml, const u64 occ)
+static void generate_rook_queen_moves(const board_t* board, movelist_t* ml, 
+									  movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
 	u32 i;
@@ -269,7 +268,7 @@ static void generate_rook_queen_moves(const board_t* board, movelist_t* ml, cons
 		/* add the move as generated from the magic tables */
 		move = magic_rook(i, occ);
 		add_quiet_move(board, (move & ~occ), i, ml);
-		add_capture_move(board, (move & board->pos.occ[oc]), i, ml);
+		add_capture_move(board, (move & board->pos.occ[oc]), i, cl);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -277,7 +276,8 @@ static void generate_rook_queen_moves(const board_t* board, movelist_t* ml, cons
 }
 
 
-static void generate_pawn_moves(const board_t* board, movelist_t* ml, const u64 occ)
+static void generate_pawn_moves(const board_t* board, movelist_t* ml, 
+								movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
 	u32 i;
@@ -311,18 +311,18 @@ static void generate_pawn_moves(const board_t* board, movelist_t* ml, const u64 
 			add_special_move(board, move, i, ml, BISHOP_PROMO);
 			add_special_move(board, move, i, ml, ROOK_PROMO);
 			add_special_move(board, move, i, ml, QUEEN_PROMO);
-			add_special_move(board, capture, i, ml, KNIGHT_PROMO_CAP);
-			add_special_move(board, capture, i, ml, BISHOP_PROMO_CAP);
-			add_special_move(board, capture, i, ml, ROOK_PROMO_CAP);
-			add_special_move(board, capture, i, ml, QUEEN_PROMO_CAP);
+			add_special_move(board, capture, i, cl, KNIGHT_PROMO_CAP);
+			add_special_move(board, capture, i, cl, BISHOP_PROMO_CAP);
+			add_special_move(board, capture, i, cl, ROOK_PROMO_CAP);
+			add_special_move(board, capture, i, cl, QUEEN_PROMO_CAP);
 		} else {
 			add_quiet_move(board, move, i, ml);
-			add_capture_move(board, capture, i, ml);
+			add_capture_move(board, capture, i, cl);
 		}
 
 		if (is_valid_index(board->enpas)) {
 			move = (1ULL << board->enpas);
-			add_special_move(board, (pawn_capturelist[s][i] & move), i, ml, EP_CAPTURE);
+			add_special_move(board, (pawn_capturelist[s][i] & move), i, cl, EP_CAPTURE);
 		}
 
 		pieces ^= (1ULL << i);
@@ -330,7 +330,8 @@ static void generate_pawn_moves(const board_t* board, movelist_t* ml, const u64 
 }
 
 
-static void generate_king_moves(const board_t* board, movelist_t* ml, const u64 occ)
+static void generate_king_moves(const board_t* board, movelist_t* ml, 
+								movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
 	u32 i, j;
@@ -355,7 +356,7 @@ static void generate_king_moves(const board_t* board, movelist_t* ml, const u64 
 
 	/* AND in ~opp to ensure the king cannot move to an attacked position */
 	add_quiet_move(board, (moves & ~occ & ~opp), i, ml);
-	add_capture_move(board, (moves & board->pos.occ[oc] & ~opp), i, ml);
+	add_capture_move(board, (moves & board->pos.occ[oc] & ~opp), i, cl);
 
 	/* generate castling moves */
 	castle_bits = (board->castle & (3 << (2 * s)));
@@ -375,23 +376,25 @@ static void generate_king_moves(const board_t* board, movelist_t* ml, const u64 
 }
 
 
-u32 generate_moves(const board_t* board, movelist_t* ml)
+u32 generate_moves(const board_t* board, movelist_t* ml, movelist_t *cl)
 {
 	u64 occ;
 
 	assert(board);
 	assert(ml);
+	assert(cl);
 
 	ml->count = 0;
+	cl->count = 0;
 	occ = board->pos.occ[WHITE] | board->pos.occ[BLACK];
 
-	generate_rook_queen_moves(board, ml, occ);
-	generate_bishop_queen_moves(board, ml, occ);
-	generate_knight_moves(board, ml, occ);
-	generate_pawn_moves(board, ml, occ);
-	generate_king_moves(board, ml, occ);
+	generate_rook_queen_moves(board, ml, cl, occ);
+	generate_bishop_queen_moves(board, ml, cl, occ);
+	generate_knight_moves(board, ml, cl, occ);
+	generate_pawn_moves(board, ml, cl, occ);
+	generate_king_moves(board, ml, cl, occ);
 
-	return ml->count;
+	return ((ml == cl) ? ml->count : ml->count + cl->count);
 }
 
 

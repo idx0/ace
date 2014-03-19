@@ -117,6 +117,7 @@ u64* ray_list[8];
  */
 extern void init_movelists();
 extern void init_app(app_t *app);
+extern void init_startpos(app_t *app);
 extern void destroy_app(app_t *app);
 /* Returns a bitboard representing all the squares attacked by side s.  This 
  * does not include the pawn who made an en passant move.
@@ -140,9 +141,12 @@ extern int is_attacked(const board_t* board, const u32 sq, const side_color_t s)
  * Generates all valid moves for the given board configuration
  * @param board The board structure
  * @param ml The movelist into which the generated moves will be stored
+ * @param cl The movelist into which capture moves will be generated (this value
+ *           can be set to ml if capture moves do not need to be generated
+ *           separately).
  * @return The number of moves generated
  */
-extern u32 generate_moves(const board_t* board, movelist_t* ml);
+extern u32 generate_moves(const board_t* board, movelist_t* ml, movelist_t *cl);
 /**
  * Removes the piece at sq.
  * @param board The board structure
@@ -269,3 +273,8 @@ extern void store_hash(hash_table_t *table, board_t *board, const move_t move,
 extern int probe_hash(hash_table_t *table, board_t *board, move_t *outmove,
                       int *outscore, int depth, int alpha, int beta);
 extern move_t probe_hash_move(hash_table_t *table, u64 boardkey);
+
+
+
+extern void init_uci();
+extern int parse_uci(app_t *app, char *sz, size_t len);

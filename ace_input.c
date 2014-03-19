@@ -209,7 +209,7 @@ move_t process_algebraic(board_t* board, const char *sz,
     }
 
     /* ok, let's generate a list of valid moves and verify */
-    generate_moves(board, &ml);
+    generate_moves(board, &ml, &ml);
 
     if (move_think == TKING) {
         if (s == WHITE) {
@@ -373,7 +373,7 @@ move_t process_long_notation(board_t* board, const char *sz,
     if (!output) return 0;
 
     /* ok, let's generate a list of valid moves and verify */
-    generate_moves(board, &ml);
+    generate_moves(board, &ml, &ml);
 
     /* finally, check if the move we think we made is in our move list */
     ul.count = 0;
@@ -505,7 +505,7 @@ static int command_info(app_t *app, char **ctx)
                 (app->search.flags & SEARCH_DEPTH ? 'D' : '-'),
                 (app->search.flags & SEARCH_TIMED ? 'T' : '-'),
                 (app->search.flags & SEARCH_STOPPED ? 'S' : '-'),
-                (app->search.flags & SEARCH_PONDER ? 'P ' : '-'),
+                (app->search.flags & SEARCH_PONDER ? 'P' : '-'),
                 (app->search.flags & SEARCH_INFINITE ? 'I' : '-'),
                 (app->search.flags & SEARCH_NULL ? 'N' : '-'));
         }
@@ -518,7 +518,6 @@ static int command_info(app_t *app, char **ctx)
 static int process_ace_command(app_t *app, char *sz, size_t len)
 {
     static const char delim[] = " \t\r\n";
-    fen_state_t fen;
     move_t m;
     char *ptr, *ctx = NULL;
     size_t cmdlen;
@@ -540,15 +539,9 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
             app->mode = IMOVE;
         } else if (strncmp(ptr, "uci", 3) == 0) {
             app->mode = IUCI;
-            printf("id name %s %s\n", ACE_NAME, ACE_VERSION);
-            printf("id author %s\n", ACE_AUTHOR);
-            printf("uciok\n");
+            init_uci();
         } else if (strncmp(ptr, "init", 4) == 0) {
-            fen_init(&fen);
-            fen_use_ptr(&fen, app->board);
-            fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
-            fen_destroy(&fen);
-            app->ul.count = 0;
+            init_startpos(app);
         } else if (strncmp(ptr, "perft", 5) == 0) {
             perft_kiwipete();
             printf("-----\n");
@@ -591,15 +584,14 @@ int process_command(app_t *app, char *sz, size_t len)
     /* check for quit first */
     if (command_quit(sz, len)) {
         app->quit = TRUE;
+    /* check for 'done' which takes the user out of the current mode */
+    } else if (command_done(sz, len)) {
+        app->mode = IACE;
     } else {
         switch (app->mode)
         {
             case IMOVE:
-                if (!command_done(sz, len)) {
-                    process_moves(app->board, &app->ul, sz, len, app->board->side);
-                } else {
-                    app->mode = IACE;
-                }
+                process_moves(app->board, &app->ul, sz, len, app->board->side);
                 break;
             case IFEN:
                 fen_init(&fen);
@@ -610,6 +602,9 @@ int process_command(app_t *app, char *sz, size_t len)
                 break;
             case IACE:
                 process_ace_command(app, sz, len);
+                break;
+            case IUCI:
+                parse_uci(app, sz, len);
                 break;
             default: break;
         }

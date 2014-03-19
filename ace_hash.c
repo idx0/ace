@@ -26,7 +26,7 @@
 
 static void clear_hash(hash_table_t *table)
 {
-	u32 i, size = 0;
+	u32 i;
 
 	assert(table);
 
@@ -95,21 +95,27 @@ void store_hash(hash_table_t *table, board_t *board, const move_t move,
 	/* loop through the records in this cluster and look for an empty sport or
 	   collision */
 	for (i = 0; i < 4; i++, rec++) {
+		/* is this an empty record */
 		if (rec->key == 0) {
 			/* new entry */
 			table->entries++;
 			add = rec;
 			break;
+		/* is this a record we can overwrite */
 		} else if (rec->key == board->key) {
 			/* overwrite old entry, save move */
 			table->overwritten++;
 			m = (move_t)rec->move;
 			add = rec;
 			break;
+		/* is this a seed record (if so keep only 1) */
+		} else if ((rec->flags == HASH_SEED) && (flags == HASH_SEED)) {
+			add = rec;
+			break;
 		}
 
 		/* maybe this guy is old, try to replace him */
-		if (rec->age < table->generations)
+		if (rec->age != (table->generations & 0xff))
 			add = rec;
 	}
 
@@ -124,9 +130,9 @@ void store_hash(hash_table_t *table, board_t *board, const move_t move,
 		add->move = m;
 		add->key = board->key;
 		add->flags = flags;
-		add->score = score;
+		add->score = (s16)score;
 		add->depth = (u16)depth;
-		add->age = table->generations;
+		add->age = (u8)(table->generations & 0xff);
 	}
 }
 
@@ -166,7 +172,8 @@ int probe_hash(hash_table_t *table, board_t *board, move_t *outmove, int *outsco
 						*outscore = beta;
 						return TRUE;
 					}
-				} else if (rec->h[i].flags & HASH_EXACT) {
+				} else if ((rec->h[i].flags & HASH_EXACT) ||
+						   (rec->h[i].flags & HASH_SEED)) {
 					return TRUE;
 				}
 			}

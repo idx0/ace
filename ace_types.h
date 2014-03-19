@@ -179,6 +179,7 @@ typedef struct position {
 #define HASH_ALPHA	1
 #define HASH_BETA	2
 #define HASH_EXACT	4
+#define HASH_SEED	8
 
 /**
  * 128 bit hash entry
@@ -237,6 +238,8 @@ typedef struct node {
 	u16 flags;
 	/* the move list for this node */
 	movelist_t ml;
+	/* the capture list for this node */
+	movelist_t cl;
 	/* number of moves actually made by this node */
 	u16 made;
 } node_t;

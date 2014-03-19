@@ -133,7 +133,7 @@ u64 perft(board_t* board, undolist_t* ul, int depth)
 
 	if (!depth) return 1;
 
-	nmoves = generate_moves(board, &ml);
+	nmoves = generate_moves(board, &ml, &ml);
 
 	for (i = 0; i < nmoves; i++) {
 		if (do_move(board, ul, ml.moves[i])) {
