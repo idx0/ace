@@ -94,6 +94,12 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 
 	app->search.nodes++;
 
+
+	/* max depth */
+	if (app->board->ply > (SEARCH_MAXDEPTH - 1)) {
+		return evaluate(app->board);
+	}
+
 	/* recursive base */
 	if (depth == 0) {
 		return evaluate(app->board);
@@ -104,15 +110,12 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 		return 0;
 	}
 
-	/* max depth */
-	if (app->board->ply > (SEARCH_MAXDEPTH - 1)) {
-		return evaluate(app->board);
-	}
-
 	/* if we are checked, set the nodes checked flag */
 	if (check(app->board, app->board->side)) {
 		node.flags |= NODE_CHECK;
 		/* extend our search by 1 depth if we are in check */
+		/* NOTES: we may want to NOT extend our search here if the parent
+		   is in check, because the means we already extended once */
 		depth++;
 	}
 
