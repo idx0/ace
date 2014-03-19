@@ -28,7 +28,7 @@
 
 static int repetitions(const app_t *app)
 {
-	int i;
+	unsigned int i;
 
 	for (i = app->ul.count - app->board->half; i < app->ul.count; i++) {
 		if (app->board->key == app->ul.undo[i].key) return TRUE;
@@ -65,20 +65,30 @@ static void next_move(int num, movelist_t *ml)
 }
 
 
+static void init_node(node_t *node)
+{
+	node->flags = 0;
+	node->ml.count = 0;
+	node->best = 0;
+	node->made = 0;
+}
+
+
 int quiescent(app_t *app, int alpha, int beta)
 {
 	return 0;
 }
 
 
-int alpha_beta(app_t *app, int alpha, int beta, int depth)
+int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 {
-	int made = 0, palpha = alpha;
+	int palpha = alpha;
 	int i, score = -MATE, highest = -MATE;
-	int checked;
-	movelist_t ml;
-	move_t best = 0, cutoff = 0;
+	node_t node;
+	move_t cutoff = 0;
 	piece_t p;
+
+	init_node(&node);
 
 	assert(app);
 
@@ -99,9 +109,10 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 		return evaluate(app->board);
 	}
 
-	/* if we are checked, simply bump the depth by 1 */
-	checked = check(app->board, app->board->side);
-	if (checked) {
+	/* if we are checked, set the nodes checked flag */
+	if (check(app->board, app->board->side)) {
+		node.flags |= NODE_CHECK;
+		/* extend our search by 1 depth if we are in check */
 		depth++;
 	}
 
@@ -112,37 +123,37 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 	}
 
 	/* generate moves */
-	generate_moves(app->board, &ml);
+	generate_moves(app->board, &node.ml);
 
 	/* reset score */
 	score = -MATE;
 
 	/* try to match our cutoff move */
 	if (cutoff != 0) {
-		for (i = 0; i < ml.count; i++) {
-			if (ml.moves[i] == cutoff) {
-				ml.scores[i] = 20000;
+		for (i = 0; i < node.ml.count; i++) {
+			if (node.ml.moves[i] == cutoff) {
+				node.ml.scores[i] = 20000;
 				break;
 			}
 		}
 	}
 
 	/* search negamax */
-	for (i = 0; i < ml.count; i++) {
+	for (i = 0; i < node.ml.count; i++) {
 		/* get the next move ordered */
-		next_move(i, &ml);
+		next_move(i, &node.ml);
 
-		if (!(do_move(app->board, &app->ul, ml.moves[i])))
+		if (!(do_move(app->board, &app->ul, node.ml.moves[i])))
 			continue;
 
-		score = -alpha_beta(app, -beta, -alpha, depth - 1);
+		score = -alpha_beta(app, &node, -beta, -alpha, depth - 1);
 
-		made++;
+		node.made++;
 		undo_move(app->board, &app->ul);
 
 		/* score whatever is best so far */
 		if (score > highest) {
-			best = ml.moves[i];
+			node.best = node.ml.moves[i];
 			highest = score;
 
 			/* update alpha */
@@ -150,14 +161,14 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 				if (score >= beta) {
 
 					/* non-captures causing beta cutoffs (killers) */
-					if (!is_capture(ml.moves[i])) {
+					if (!is_capture(node.ml.moves[i])) {
 						app->board->killers[1][app->board->ply] =
 							app->board->killers[0][app->board->ply];
-						app->board->killers[0][app->board->ply] = ml.moves[i];
+						app->board->killers[0][app->board->ply] = node.ml.moves[i];
 					}
 
 					/* store this beta in our transposition table */
-					store_hash(&app->hash, app->board, best, beta, HASH_BETA, depth);
+					store_hash(&app->hash, app->board, node.best, beta, HASH_BETA, depth);
 
 					return beta;
 				}
@@ -166,17 +177,17 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 				alpha = score;
 
 				/* update our history */
-				if (!is_capture(ml.moves[i])) {
-					p = app->board->pos.squares[move_from(best)];
-					app->board->history[piece_color(p)][piece_type(p)][move_to(best)] += depth;
+				if (!is_capture(node.best)) {
+					p = app->board->pos.squares[move_from(node.best)];
+					app->board->history[piece_color(p)][piece_type(p)][move_to(node.best)] += depth;
 				}
 			}
 		}
 	}
 
 	/* check for checkmate or stalemate */
-	if (!made) {
-		if (check(app->board, app->board->side)) {
+	if (!node.made) {
+		if (node.flags & NODE_CHECK) {
 			return -MATE + app->board->ply;
 		} else {
 			return 0;
@@ -185,10 +196,10 @@ int alpha_beta(app_t *app, int alpha, int beta, int depth)
 
 	if (alpha != palpha) {
 		/* store this as an exact, since we beat alpha */
-		store_hash(&app->hash, app->board, best, highest, HASH_EXACT, depth);
+		store_hash(&app->hash, app->board, node.best, highest, HASH_EXACT, depth);
 	} else {
 		/* store the current alpha */
-		store_hash(&app->hash, app->board, best, alpha, HASH_ALPHA, depth);
+		store_hash(&app->hash, app->board, node.best, alpha, HASH_ALPHA, depth);
 	}
 
 	return alpha;
@@ -282,9 +293,13 @@ static int print_pv(app_t *app, int depth)
 void think(app_t *app)
 {
 	int i, val;
+	node_t root;
 
 	assert(app);
 	assert(app->board);
+
+	init_node(&root);
+	root.flags |= NODE_ROOT;
 
 	/* reset our node count board->ply */
 	app->board->ply = 0;
@@ -303,7 +318,7 @@ void think(app_t *app)
 
 	/* iterative deepening */
 	for (i = 1; i < app->search.depth; i++) {
-		val = alpha_beta(app, -MATE, MATE, i);
+		val = alpha_beta(app, &root, -MATE, MATE, i);
 
 		printf("depth %d ", i);
 		print_pv(app, i);

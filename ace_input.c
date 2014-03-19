@@ -420,8 +420,8 @@ int input_ready()
     FD_ZERO(&readfds);
     FD_SET(fileno(stdin), &readfds);
 
-    tv.tv_sec=0;
-    tv.tv_usec=0;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
 
     select(16, &readfds, 0, 0, &tv);
 
@@ -495,6 +495,7 @@ static int command_info(app_t *app)
             printf("  hits w/ cutoff= %d\n", app->hash.cut);
             printf("  size (mb)=      %d\n", (1 << app->hash.size) / (1024 * 1024));
             printf("  size (records)= %d\n", app->hash.exist);
+            printf("  age=            %d\n", app->hash.generations);
         }
     }
 

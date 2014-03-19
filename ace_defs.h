@@ -60,3 +60,10 @@
 #define ACE_AUTHOR	"Stephen Schweizer"
 #define ACE_EMAIL	"<code@theindexzero.com>"
 #define ACE_VERSION	"0.780"
+
+/* If this define is set, EXACT hash entries won't be overwritten by BETA or
+   ALPHA entries, even when the depth is deeper */
+/* #define DONT_BEAT_EXACT */
+
+
+

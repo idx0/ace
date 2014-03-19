@@ -198,9 +198,13 @@ typedef struct hash_record {
 	u64 flags : 8;	/* the flags for this entry */
 } hash_record_t;
 
+typedef struct hash_cluster {
+	hash_record_t h[4];
+} hash_cluster_t;
+
 typedef struct hash_table {
 	/* A pointer to the aligned memory hash table */
-	hash_record_t *record;
+	hash_cluster_t *record;
 	/* The number of entries in the table */
 	int entries;
 	/* The number of entries overwritten during search */
@@ -213,9 +217,31 @@ typedef struct hash_table {
 	u32 size;
 	/* The total number of hash record entries existing in the table */
 	u32 exist;
+	/* the number of generations of this table */
+	u8 generations;
 } hash_table_t;
 
 #define SEARCH_MAXDEPTH	64
+
+#define NODE_ROOT		1 	/* flag indicating the node is the root node */
+#define NODE_CHECK		2 	/* flag indicating the side is in check on this node */
+#define NODE_NULL		4	/* flag indicating null moves are allowed on
+							   children of this node */
+
+/* This structure holds node relavent information.  It is contained in the
+   stack of the alpha-beta function and passed to each child */
+typedef struct node {
+	/* the best move found so far by this node */
+	move_t best;
+	/* flags set for this node */
+	u16 flags;
+	/* the move list for this node */
+	movelist_t ml;
+	/* number of moves actually made by this node */
+	u16 made;
+} node_t;
+
+typedef const node_t* const cnodeptr_t;
 
 /* board structure */
 typedef struct board {
@@ -281,4 +307,6 @@ typedef struct ace_app {
 	searchdata_t search;
 	/* application wide transposition table */
 	hash_table_t hash;
+	/* the side the application is playing */
+	side_color_t side;
 } app_t;

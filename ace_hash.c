@@ -33,7 +33,10 @@ static void clear_hash(hash_table_t *table)
 	size = (1 << table->size) / sizeof(hash_record_t);
 
 	for (i = 0; i < size; i++) {
-		memset(&table->record[i], 0, sizeof(hash_record_t));
+		memset(&table->record[i].h[0], 0, sizeof(hash_record_t));
+		memset(&table->record[i].h[1], 0, sizeof(hash_record_t));
+		memset(&table->record[i].h[2], 0, sizeof(hash_record_t));
+		memset(&table->record[i].h[3], 0, sizeof(hash_record_t));
 	}
 }
 
@@ -52,15 +55,16 @@ void init_hash(hash_table_t *table, u16 mb)
 	table->hit = 0;
 	table->cut = 0;
 	table->size = 20 + bits;
+	table->generations = 0;
 
 	if (table->size > 31) { table->size = 31; }
 
 	size = (1 << table->size);
-	table->exist = size / sizeof(hash_record_t);
+	table->exist = size >> 7;
 
 	/* try to align our table, whose record length is 16 bytes, on a 16 byte
 	   boundary */
-	table->record = (hash_record_t *)xmalloc(size, 16);
+	table->record = (hash_cluster_t *)xmalloc(size, 64);
 
 	assert(table->record);
 
@@ -72,6 +76,8 @@ void store_hash(hash_table_t *table, board_t *board, const move_t move,
 				int score, int flags, int depth)
 {
 	u32 i, mask;
+	move_t m = move;
+	hash_record_t *rec, *add;
 
 	assert(table);
 	assert(board);
@@ -86,20 +92,43 @@ void store_hash(hash_table_t *table, board_t *board, const move_t move,
 	   our depth value) */
 	if ((MATE - abs(score)) <= SEARCH_MAXDEPTH) score = (score < 0 ? -1 : 1) * MATE;
 
-	/* check if this entry is at a depth >= the depth already stored */
-	if (depth >= table->record[i].depth) {
-		if (table->record[i].key != 0) {
-			table->overwritten++;
-		} else {
+	rec = add = table->record[i].h;
+
+	/* loop through the records in this cluster and look for an empty sport or
+	   collision */
+	for (i = 0; i < 4; i++, rec++) {
+		if (rec->key == 0) {
+			/* new entry */
 			table->entries++;
+			add = rec;
+			break;
+		} else if (rec->key == board->key) {
+			/* overwrite old entry, save move */
+			table->overwritten++;
+			m = (move_t)rec->move;
+			add = rec;
+			break;
 		}
 
-		table->record[i].move = move;
-		table->record[i].key = board->key;
-		table->record[i].flags = flags;
-		table->record[i].score = score;
-		table->record[i].depth = (u16)depth;
-		table->record[i].age = 1;
+		/* maybe this guy is old, try to replace him */
+		if (rec->age < table->generations)
+			add = rec;
+	}
+
+
+	/* check if this entry is at a depth >= the depth already stored */
+	if ((depth >= add->depth) || (flags == HASH_EXACT))
+	{
+#ifdef DONT_BEAT_EXACT
+		if ((add->flags == HASH_EXACT) && (flags != HASH_EXACT)) return;
+#endif
+
+		add->move = m;
+		add->key = board->key;
+		add->flags = flags;
+		add->score = score;
+		add->depth = (u16)depth;
+		add->age = table->generations;
 	}
 }
 
@@ -107,38 +136,41 @@ void store_hash(hash_table_t *table, board_t *board, const move_t move,
 int probe_hash(hash_table_t *table, board_t *board, move_t *outmove, int *outscore,
 			   int depth, int alpha, int beta)
 {
+	int i;
 	u32 mask = table->exist - 1;
-	hash_record_t *rec = &table->record[board->key & mask];
+	hash_cluster_t *rec = &table->record[board->key & mask];
 
 	assert(outmove);
 	assert(outscore);
 
-	if (rec->key == board->key) {
-		*outmove = rec->move;
+	for (i = 0; i < 4; i++) {
+		if (rec->h[i].key == board->key) {
+			*outmove = (move_t)rec->h[i].move;
 
-		if (rec->depth >= depth) {
-			table->hit++;
+			if (rec->h[i].depth >= depth) {
+				table->hit++;
 
-			*outscore = rec->score;
+				*outscore = (s16)rec->h[i].score;
 
-			/* if the recorded score is MATE, return MATE +- ply */
-			if (abs(rec->score) == MATE) {
-				*outscore -= get_sign(rec->score, 16) * board->ply;
-			}
-
-			/* check for our return */
-			if (rec->flags & HASH_ALPHA) {
-				if (rec->score <= alpha) {
-					*outscore = alpha;
+				/* if the recorded score is MATE, return MATE +- ply */
+				if (abs(*outscore) == MATE) {
+					*outscore -= get_sign(rec->h[i].score, 16) * board->ply;
 				}
-				return TRUE;
-			} else if (rec->flags & HASH_BETA) {
-				if (rec->score >= beta) {
-					*outscore = beta;
+
+				/* check for our return */
+				if (rec->h[i].flags & HASH_ALPHA) {
+					if (rec->h[i].score <= alpha) {
+						*outscore = alpha;
+					}
+					return TRUE;
+				} else if (rec->h[i].flags & HASH_BETA) {
+					if (rec->h[i].score >= beta) {
+						*outscore = beta;
+					}
+					return TRUE;
+				} else if (rec->h[i].flags & HASH_EXACT) {
+					return TRUE;
 				}
-				return TRUE;
-			} else if (rec->flags & HASH_EXACT) {
-				return TRUE;
 			}
 		}
 	}
@@ -149,11 +181,14 @@ int probe_hash(hash_table_t *table, board_t *board, move_t *outmove, int *outsco
 
 move_t probe_hash_move(hash_table_t *table, u64 boardkey)
 {
+	int i;
 	u32 mask = table->exist - 1;
-	hash_record_t *rec = &table->record[boardkey & mask];
+	hash_cluster_t *rec = &table->record[boardkey & mask];
 
-	if (rec->key == boardkey) {
-		return rec->move;
+	for (i = 0; i < 4; i++) {
+		if (rec->h[i].key == boardkey) {
+			return (move_t)rec->h[i].move;
+		}
 	}
 
 	return 0;
