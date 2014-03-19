@@ -159,12 +159,12 @@ int probe_hash(hash_table_t *table, board_t *board, move_t *outmove, int *outsco
 
 				/* check for our return */
 				if (rec->h[i].flags & HASH_ALPHA) {
-					if (rec->h[i].score <= alpha) {
+					if (*outscore <= alpha) {
 						*outscore = alpha;
 						return TRUE;
 					}
 				} else if (rec->h[i].flags & HASH_BETA) {
-					if (rec->h[i].score >= beta) {
+					if (*outscore >= beta) {
 						*outscore = beta;
 						return TRUE;
 					}
