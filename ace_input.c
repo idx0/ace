@@ -90,11 +90,11 @@ int process_moves(board_t *board, undolist_t *ul, char *sz,
                   size_t len, side_color_t s)
 {
     static const char delim[] = " ,.";
-    char *ptr;
+    char *ptr, *ctx = NULL;
     move_t m;
     int nmoves = 0;
 
-    ptr = strtok(sz, delim);
+    ptr = strtok2(sz, delim, &ctx);
     while (ptr) {
         m = process_algebraic(board, ptr, strlen(ptr), s);
 
@@ -105,7 +105,7 @@ int process_moves(board_t *board, undolist_t *ul, char *sz,
             fprintf(stderr, "ace: process moves stopped - invalid move `%s'\n", ptr);
         }
 
-        ptr = strtok(NULL, delim);
+        ptr = strtok2(NULL, delim, &ctx);
     }
 
     return nmoves;
@@ -476,12 +476,12 @@ static int is_shorthand(const char *ptr, size_t len, char match)
 }
 
 
-static int command_info(app_t *app)
+static int command_info(app_t *app, char **ctx)
 {
     static const char delim[] = " \t\r\n";
     char *ptr;
     size_t cmdlen;
-    ptr = strtok(NULL, delim);
+    ptr = strtok2(NULL, delim, ctx);
 
     if (ptr) {
         cmdlen = strlen(ptr);
@@ -496,6 +496,18 @@ static int command_info(app_t *app)
             printf("  size (mb)=      %d\n", (1 << app->hash.size) / (1024 * 1024));
             printf("  size (records)= %d\n", app->hash.exist);
             printf("  age=            %d\n", app->hash.generations);
+        } else if (strncmp(ptr, "search", 6) == 0) {
+            printf("search -----\n");
+            printf("  depth=          %d\n", app->search.depth);
+            printf("  movesleft=      %d\n", app->search.movesleft);
+            printf("  nodes=          %lld\n", app->search.nodes);
+            printf("  flags=          %c%c%c%c%c%c\n",
+                (app->search.flags & SEARCH_DEPTH ? 'D' : '-'),
+                (app->search.flags & SEARCH_TIMED ? 'T' : '-'),
+                (app->search.flags & SEARCH_STOPPED ? 'S' : '-'),
+                (app->search.flags & SEARCH_PONDER ? 'P ' : '-'),
+                (app->search.flags & SEARCH_INFINITE ? 'I' : '-'),
+                (app->search.flags & SEARCH_NULL ? 'N' : '-'));
         }
     }
 
@@ -508,9 +520,11 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
     static const char delim[] = " \t\r\n";
     fen_state_t fen;
     move_t m;
-    char *ptr;
+    char *ptr, *ctx = NULL;
     size_t cmdlen;
-    ptr = strtok(sz, delim);
+    int tmp;
+
+    ptr = strtok2(sz, delim, &ctx);
 
     if (ptr) {
         cmdlen = strlen(ptr);
@@ -540,15 +554,17 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
             printf("-----\n");
             pertf_runtests();
         } else if (strncmp(ptr, "think", 5) == 0) {
-            ptr = strtok(NULL, delim);
+            ptr = strtok2(NULL, delim, &ctx);
             if (ptr) {
-                app->search.depth = atoi(ptr);
-                if (app->search.depth >= SEARCH_MAXDEPTH)
-                    app->search.depth = SEARCH_MAXDEPTH - 1;
+                tmp = atoi(ptr);
+                if ((tmp <= 0) || (tmp > SEARCH_MAXDEPTH - 1))
+                    app->search.depth = 8;
+                else
+                    app->search.depth = tmp;
                 think(app);
             }
         } else if (strncmp(ptr, "info", 4) == 0) {
-            return command_info(app);
+            return command_info(app, &ctx);
         } else if (strncmp(ptr, "help", 4) == 0) {
         } else {
             /* maybe this is a move */

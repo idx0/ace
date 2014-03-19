@@ -340,11 +340,15 @@ void init_app(app_t *app)
 		fen_destroy(&fen);
 	}
 
-	/* 16 mb hash to start */
-	init_hash(&app->hash, 256);
-
 	/* clear search info */
 	memset(&app->search, 0, sizeof(searchdata_t));
+
+	/* set search defaults */
+	app->search.flags |= SEARCH_STOPPED;
+	app->search.depth = 8;
+
+	/* 16 mb hash to start */
+	init_hash(&app->hash, 256);
 }
 
 
@@ -353,5 +357,5 @@ void destroy_app(app_t *app)
 	assert(app);
 
 	free(app->board);
-	free(app->hash.record);
+	xfree(app->hash.record);
 }

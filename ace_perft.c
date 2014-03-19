@@ -23,11 +23,6 @@
 #include "ace_types.h"
 #include "ace_fen.h"
 
-//#define PRINT_DEBUG
-#ifdef PRINT_DEBUG
-#include "ace_display.h"
-#endif
-
 #define PERFT_TESTFILE "perftsuite.epd"
 
 void perft_kiwipete()
@@ -70,11 +65,13 @@ void pertf_runtests()
 	undolist_t ul;
 	ms_time_t tm_before, tm_after;
 
-#ifdef PRINT_DEBUG
-	printf("WARNING: DEBUG PRINTING IS ON!\n");
-#endif
-
+#ifdef ACE_WINDOWS
+	if (fopen_s(&fp, PERFT_TESTFILE, "r")) return;
+#else
 	fp = fopen(PERFT_TESTFILE, "r");
+
+	if (!fp) return;
+#endif
 
 	fen_init(&fen);
 
@@ -140,18 +137,8 @@ u64 perft(board_t* board, undolist_t* ul, int depth)
 
 	for (i = 0; i < nmoves; i++) {
 		if (do_move(board, ul, ml.moves[i])) {
-#ifdef PRINT_DEBUG
-			printf("depth %d >>>\n", depth);
-			print_board(board);
-			printf("\n");
-#endif
 			nodes += perft(board, ul, depth - 1); 
 			undo_move(board, ul);
-#ifdef PRINT_DEBUG
-			print_board(board);
-			getchar();
-			printf("\n\n");
-#endif
 		}
 	}
 

@@ -52,6 +52,10 @@ void *xmalloc(size_t sz, size_t align)
 {
     return _aligned_malloc(sz, align);
 }
+void xfree(void *ptr)
+{
+    _aligned_free(ptr);
+}
 #else
 void *xmalloc(size_t sz, size_t align)
 {
@@ -67,5 +71,9 @@ void *xmalloc(size_t sz, size_t align)
     /* on glibc, malloc is always align=8 */
     return malloc(sz);
 #endif
+}
+void xfree(void *ptr)
+{
+    free(ptr);
 }
 #endif

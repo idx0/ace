@@ -30,9 +30,7 @@ static void clear_hash(hash_table_t *table)
 
 	assert(table);
 
-	size = (1 << table->size) / sizeof(hash_record_t);
-
-	for (i = 0; i < size; i++) {
+	for (i = 0; i < table->exist; i++) {
 		memset(&table->record[i].h[0], 0, sizeof(hash_record_t));
 		memset(&table->record[i].h[1], 0, sizeof(hash_record_t));
 		memset(&table->record[i].h[2], 0, sizeof(hash_record_t));
