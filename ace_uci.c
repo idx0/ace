@@ -107,6 +107,19 @@ int parse_uci_position(app_t *app, char **ctx)
 }
 
 
+static void parse_uci_go(app_t *app, char **ctx)
+{
+	char *ptr;
+	size_t cmdlen;
+
+	while ((ptr = strtok2(NULL, uci_delim, ctx))) {
+		cmdlen = strlen(ptr);
+	}
+
+	think(app);
+}
+
+
 int parse_uci(app_t *app, char *sz, size_t len)
 {
 	char *ptr, *ctx = NULL;
@@ -123,6 +136,7 @@ int parse_uci(app_t *app, char *sz, size_t len)
 		} else if (strncmp(ptr, "ucinewgame", 10) == 0) {
 			init_startpos(app);
 		} else if (strncmp(ptr, "go", 2) == 0) {
+			parse_uci_go(app, &ctx);
 		}
 	}
 

@@ -456,6 +456,17 @@ int input_ready()
 }
 
 
+void checkup(app_t *app)
+{
+    char buf[256];
+
+    if (input_ready()) {
+        fgets(str, 256, stdin);
+        printf("%s\n");
+    }
+}
+
+
 static int command_done(const char *sz, size_t len)
 {
     static const char cmd[] = "done";

@@ -220,6 +220,11 @@ extern int evaluate(board_t* board);
 extern void think(app_t *app);
 
 /**
+ * The "checkup" function which looks for input on stdin
+ */
+extern void checkup(app_t *app);
+
+/**
  * Processes a move in algebraic notation from user input
  * @param board The board structure
  * @param sz The input string
