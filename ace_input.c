@@ -43,7 +43,6 @@ static u8 get_source_sq(const board_t* board, const movelist_t* ml,
 {
     int i;
     u32 to, from;
-    u8 kind;
     u8 src = INVALID_SQUARE;
     piece_t piece;
 
@@ -54,7 +53,6 @@ static u8 get_source_sq(const board_t* board, const movelist_t* ml,
     for (i = 0; i < ml->count; i++) {
         to = move_to(ml->moves[i]);
         from = move_from(ml->moves[i]);
-        kind = move_kind(ml->moves[i]);
 
         piece = board->pos.squares[from];
 
@@ -118,7 +116,7 @@ move_t process_algebraic(board_t* board, const char *sz,
 	move_t output;
 	piece_type_t piece = PAWN;
 	board_rank_t dest_rank = 0;
-	board_file_t dest_file = 0, src_file = 0;
+	board_file_t dest_file = 0;
 	u8 kind, to, from;
 	movelist_t ml;
 	undolist_t ul;
@@ -168,7 +166,6 @@ move_t process_algebraic(board_t* board, const char *sz,
     		if (move_think == TQUIET) {
     			move_think = TCAP;
     		} else if (move_think == TPAWN) {
-    			src_file = dest_file;
                 dest_file = 0;
     			move_think = TPAWNCAP;
     		} else {
@@ -491,12 +488,9 @@ static int command_info(app_t *app, char **ctx)
 {
     static const char delim[] = " \t\r\n";
     char *ptr;
-    size_t cmdlen;
     ptr = strtok2(NULL, delim, ctx);
 
     if (ptr) {
-        cmdlen = strlen(ptr);
-
         if (strncmp(ptr, "hash", 4) == 0) {
             printf("hash table -----\n");
             printf("  record ptr=     %p\n", app->hash.record);

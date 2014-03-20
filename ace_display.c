@@ -110,7 +110,6 @@ char* str_algebraic(const piece_t piece, const move_t move)
 	u32 to = move_to(move);
 	u32 from = move_from(move);
 	u8 kind = move_kind(move);
-	int sz = 0;
 	const char pieces[2][6] = {
 		{ 'P', 'N', 'B', 'R', 'Q', 'K' },
 		{ 'P', 'N', 'B', 'R', 'Q', 'K' }
@@ -120,24 +119,24 @@ char* str_algebraic(const piece_t piece, const move_t move)
 
 	if ((kind == CAPTURE) || (kind == EP_CAPTURE)) {
 		if (piece_type(piece) == PAWN) {
-			sz = snprintf(psz, 6, "%cx%c%c", files[file(from)], files[file(to)], ranks[rank(to)]);
+			snprintf(psz, 6, "%cx%c%c", files[file(from)], files[file(to)], ranks[rank(to)]);
 		} else {
-			sz = snprintf(psz, 6, "%cx%c%c", pieces[piece_color(piece)][piece_type(piece)],
+			snprintf(psz, 6, "%cx%c%c", pieces[piece_color(piece)][piece_type(piece)],
 				files[file(to)], ranks[rank(to)]);
 		}
 	} else if (is_promotion(kind)) {
 		assert(piece_type(piece) == PAWN);
-		sz = snprintf(psz, 6, "%c%c=%c", files[file(to)], ranks[rank(to)],
+		snprintf(psz, 6, "%c%c=%c", files[file(to)], ranks[rank(to)],
 			pieces[piece_color(piece)][promoted_type[kind & 0x03]]);
 	} else if (kind == KING_CASTLE) {
-		sz = snprintf(psz, 6, "O-O");
+		snprintf(psz, 6, "O-O");
 	} else if (kind == QUEEN_CASTLE) {
-		sz = snprintf(psz, 6, "O-O-O");
+		snprintf(psz, 6, "O-O-O");
 	} else {
 		if (piece_type(piece) == PAWN) {
-			sz = snprintf(psz, 6, "%c%c", files[file(to)], ranks[rank(to)]);
+			snprintf(psz, 6, "%c%c", files[file(to)], ranks[rank(to)]);
 		} else {
-			sz = snprintf(psz, 6, "%c%c%c", pieces[piece_color(piece)][piece_type(piece)],
+			snprintf(psz, 6, "%c%c%c", pieces[piece_color(piece)][piece_type(piece)],
 				files[file(to)], ranks[rank(to)]);
 		}
 	}

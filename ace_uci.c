@@ -110,10 +110,8 @@ int parse_uci_position(app_t *app, char **ctx)
 static void parse_uci_go(app_t *app, char **ctx)
 {
 	char *ptr;
-	size_t cmdlen;
 
 	while ((ptr = strtok2(NULL, uci_delim, ctx))) {
-		cmdlen = strlen(ptr);
 	}
 
 	think(app);
@@ -123,12 +121,10 @@ static void parse_uci_go(app_t *app, char **ctx)
 int parse_uci(app_t *app, char *sz, size_t len)
 {
 	char *ptr, *ctx = NULL;
-	size_t cmdlen;
 
 	ptr = strtok2(sz, uci_delim, &ctx);
 
 	if (ptr) {
-		cmdlen = strlen(ptr);
 
 		if (strncmp(ptr, "stop", 4) == 0) {
 		} else if (strncmp(ptr, "position", 8) == 0) {
