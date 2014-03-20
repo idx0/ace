@@ -146,7 +146,7 @@ extern int is_attacked(const board_t* board, const u32 sq, const side_color_t s)
  *           separately).
  * @return The number of moves generated
  */
-extern u32 generate_moves(const board_t* board, movelist_t* ml, movelist_t *cl);
+extern u32 generate_moves(board_t* board, movelist_t* ml, movelist_t *cl);
 /**
  * Removes the piece at sq.
  * @param board The board structure
@@ -197,7 +197,7 @@ extern void undo_null_move(board_t* board, undolist_t* ul);
  * @param board The board structure
  * @param s The side color to generate cache data for
  */
-extern void generate_cache(board* board_t, const side_color_t s);
+extern void generate_cache(board_t* board, const side_color_t s);
 
 /**
  * Checks if the king for side color s is in check

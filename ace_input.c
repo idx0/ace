@@ -461,7 +461,7 @@ void checkup(app_t *app)
     char buf[256];
 
     if (input_ready()) {
-        fgets(str, 256, stdin);
+        fgets(buf, 256, stdin);
         printf("%s\n");
     }
 }
@@ -526,6 +526,44 @@ static int command_info(app_t *app, char **ctx)
 }
 
 
+static void process_ls(app_t *app)
+{
+    u32 i, s, cnt = 0;
+    movelist_t ml;
+    undolist_t ul;
+    char *sz;
+
+    assert(app);
+    assert(app->board);
+
+    print_board(app->board);
+    printf("\n");
+
+    ul.count = 0;
+    generate_moves(app->board, &ml, &ml);
+
+    for (i = 0; i < ml.count; i++) {
+        if (do_move(app->board, &ul, ml.moves[i])) {
+            /* the move is ok, the king is not left in check */
+            sz = str_algebraic(app->board->pos.squares[move_to(ml.moves[i])], ml.moves[i]);
+            s = strlen(sz);
+
+            if ((cnt + s) > 80) {
+                printf("\n");
+                cnt = 0;
+            }
+
+            cnt += s + 1;
+            printf("%s ", sz);
+
+            undo_move(app->board, &ul);
+        }
+    }
+
+    printf("\n");
+}
+
+
 static int process_ace_command(app_t *app, char *sz, size_t len)
 {
     static const char delim[] = " \t\r\n";
@@ -567,6 +605,8 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
                     app->search.depth = tmp;
                 think(app);
             }
+        } else if (strncmp(ptr, "ls", 7) == 0) {
+            process_ls(app);
         } else if (strncmp(ptr, "info", 4) == 0) {
             return command_info(app, &ctx);
         } else if (strncmp(ptr, "help", 4) == 0) {

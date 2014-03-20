@@ -159,6 +159,8 @@ typedef struct eval_cache {
 	u64 defend[2];
 	/* A bitboard representing the squares attacked by a color */
 	u64 attack[2];
+	/* A bitboard representing the squares pawns of the given color can attack */
+	u64 pawned[2];
 	/* A table representing the mobility of the piece at a given square */
 	u8 mobility[64];
 	/* This variable is set to true if the cache data is valid */
@@ -256,6 +258,8 @@ typedef struct node {
 	movelist_t cl;
 	/* number of moves actually made by this node */
 	u16 made;
+	/* the depth of this node */
+	int depth;
 } node_t;
 
 typedef const node_t* const cnodeptr_t;

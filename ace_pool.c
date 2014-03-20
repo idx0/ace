@@ -16,18 +16,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "ace_thread.h"
+#include "ace_pool.h"
 
-#include "ace_types.h"
+int check_flag(pool_t *pool, const u32 flag)
+{
+	int rc = FALSE;
 
-extern void print_bboard(const u64 bb);
-extern void print_board(const board_t* b);
-/**
- * Prints a string representation of the move.  This function is NOT thread safe.
- */
-extern void print_algebraic(const piece_t piece, const move_t move);
-/**
- * Gets a string representation of the move.  This function is NOT thread safe.
- * @return The string representation of the given move in algebraic notation
- */
-extern char* str_algebraic(const piece_t piece, const move_t move);
+	mutex_lock(&pool->flag_mutex);
+	rc = (pool->flags & flag);
+	mutex_unlock(&pool->flag_mutex);
+
+	return rc;
+}
+

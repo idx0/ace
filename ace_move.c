@@ -105,13 +105,10 @@ int check(const board_t* board, const side_color_t s)
 }
 
 
-/* calling this function also updates cache variables to the extent it can 
-   reasonably do so */
 u64 attacking(const board_t* board, const side_color_t s)
 {
 	u64 pieces, occ, friendly, ret = 0ULL;
 	u32 sq;
-	side_color_t oc = (~s & 0x01);
 
 	assert(board);
 	assert(is_valid_index(board->pos.king_sq[s]));
@@ -124,9 +121,6 @@ u64 attacking(const board_t* board, const side_color_t s)
 	while (pieces) {
 		sq = ACE_LSB64(pieces);
 		ret |= pawn_capturelist[s][sq];
-		/* we'll need to generate pawn moves as well, but we can do that in
-		   another function */
-		board->pos.cache.mobility[sq] |= pawn_capturelist[s][sq] & friendly;
 		pieces ^= (1ULL << sq);
 	}
 
@@ -135,7 +129,6 @@ u64 attacking(const board_t* board, const side_color_t s)
 	while (pieces) {
 		sq = ACE_LSB64(pieces);
 		ret |= knight_movelist[sq];
-		board->pos.cache.mobility[sq] |= knight_movelist[sq] & friendly;
 		pieces ^= (1ULL << sq);
 	}
 
@@ -144,7 +137,6 @@ u64 attacking(const board_t* board, const side_color_t s)
 	while (pieces) {
 		sq = ACE_LSB64(pieces);
 		ret |= magic_bishop(sq, occ);
-		board->pos.cache.mobility[sq] |= magic_bishop(sq, occ) & friendly;
 		pieces ^= (1ULL << sq);
 	}
 
@@ -153,28 +145,118 @@ u64 attacking(const board_t* board, const side_color_t s)
 	while (pieces) {
 		sq = ACE_LSB64(pieces);
 		ret |= magic_rook(sq, occ);
-		board->pos.cache.mobility[sq] |= magic_rook(sq, occ) & friendly;
 		pieces ^= (1ULL << sq);
 	}
 
 	/* kings */
 	ret |= king_movelist[board->pos.king_sq[s]];
-	board->pos.cache.mobility[sq] |= king_movelist[board->pos.king_sq[s]] & friendly;
+
+	return ret & friendly;
+}
+
+
+/* this function is very similary to attacking, except it generates cache values */
+void generate_cache(board_t* board, const side_color_t s)
+{
+	u64 pieces, occ, tmp, friendly;
+	u32 sq;
+	side_color_t oc = (~s & 0x01);
+
+	assert(board);
+	assert(is_valid_index(board->pos.king_sq[s]));
+
+	occ = (board->pos.occ[WHITE] | board->pos.occ[BLACK]);
+	friendly = ~board->pos.occ[s];
+
+	board->pos.cache.attack[s] = C64(0);
+	board->pos.cache.defend[s] = C64(0);
+	board->pos.cache.pawned[s] = C64(0);
+
+	/* pawns */
+	pieces = board->pos.piece[s][PAWN];
+	while (pieces) {
+		sq = ACE_LSB64(pieces);
+
+		/* for pawns, we only care about their diagonal capture moves */
+		tmp = pawn_capturelist[s][sq];
+		/* don't worry about pawn mobility */
+		board->pos.cache.attack[s] |= tmp;
+		board->pos.cache.pawned[s] |= tmp;
+
+		pieces ^= (1ULL << sq);
+	}
+
+	/* kinghts */
+	pieces = board->pos.piece[s][KNIGHT];
+	while (pieces) {
+		sq = ACE_LSB64(pieces);
+
+		tmp = knight_movelist[sq];
+		board->pos.cache.attack[s] |= tmp;
+		board->pos.cache.defend[s] |= tmp;
+		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+
+		pieces ^= (1ULL << sq);
+	}
+
+	/* bishops */
+	pieces = board->pos.piece[s][BISHOP];
+	while (pieces) {
+		sq = ACE_LSB64(pieces);
+
+		tmp = magic_bishop(sq, occ);
+		board->pos.cache.attack[s] |= tmp;
+		board->pos.cache.defend[s] |= tmp;
+		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+		
+		pieces ^= (1ULL << sq);
+	}
+
+	/* rooks */
+	pieces = board->pos.piece[s][ROOK];
+	while (pieces) {
+		sq = ACE_LSB64(pieces);
+		tmp = magic_rook(sq, occ);
+
+		board->pos.cache.attack[s] |= tmp;
+		board->pos.cache.defend[s] |= tmp;
+		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+		
+		pieces ^= (1ULL << sq);
+	}
+
+	/* queens */
+	pieces = board->pos.piece[s][QUEEN];
+	while (pieces) {
+		sq = ACE_LSB64(pieces);
+		tmp = magic_queen(sq, occ);
+
+		board->pos.cache.attack[s] |= tmp;
+		board->pos.cache.defend[s] |= tmp;
+		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+		
+		pieces ^= (1ULL << sq);
+	}
+
+
+	/* kings */
+	board->pos.cache.attack[s] |= king_movelist[board->pos.king_sq[s]];
+	board->pos.cache.defend[s] |= king_movelist[board->pos.king_sq[s]];
+	board->pos.cache.mobility[board->pos.king_sq[s]] =
+		ACE_POPCNT64(king_movelist[board->pos.king_sq[s]] & friendly);
 
 	/* at this point ret is equal to any position on the board that a piece of
 	   side s can reach */
 
 	/* positions we can attack are equal to every position we can get to that
-	   has an opponent occupying it */
-	board->pos.cache.attack[s] = ret & board->pos.occ[s];
+	   is NOT occupied by one of our own pieces already */
+	board->pos.cache.attack[s] &= friendly;
 	/* likewise, positions we can defend are equal to every position we can get
-	   to that has a friendly on it */
-	board->pos.cache.defend[s] = ret & board->pos.occ[oc];
+	   to is NOT occupied by one of the enemy pieces already */
+	board->pos.cache.defend[s] &= ~board->pos.occ[oc];
 
 	/* now, we can AND either of these bitboard with a position to see if we can
 	   attack it or defend it with the given color */
-
-	return ret & friendly;
 }
 
 
@@ -198,8 +280,6 @@ int is_attacked(const board_t* board, const u32 sq, const side_color_t s)
 		(att & (1ULL << board->enpas)) &&
 		(board->pos.piece[oc][PAWN] & sqbb) &&
 		(pawn_enpas_move[oc][file(board->enpas)] == sqbb)) {
-		/* set the enpas square pawn as attacked */
-		board->pos.cache.attack[s] |= sqbb;
 		return TRUE;
 	}
 
@@ -207,7 +287,7 @@ int is_attacked(const board_t* board, const u32 sq, const side_color_t s)
 }
 
 
-static void generate_knight_moves(const board_t* board, movelist_t* ml, 
+static void generate_knight_moves(board_t* board, movelist_t* ml, 
 								  movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
@@ -231,13 +311,19 @@ static void generate_knight_moves(const board_t* board, movelist_t* ml,
 		add_quiet_move(board, (knight_movelist[i] & ~occ), i, ml);
 		add_capture_move(board, (knight_movelist[i] & board->pos.occ[oc]), i, cl);
 
+		/* generate knight cache */
+		board->pos.cache.attack[s] |= knight_movelist[i] & ~board->pos.occ[s];
+		board->pos.cache.defend[s] |= knight_movelist[i] & ~board->pos.occ[oc];
+		board->pos.cache.mobility[i] =
+			ACE_POPCNT64(knight_movelist[i] & ~board->pos.occ[s]);
+
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
 	}
 }
 
 
-static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml, 
+static void generate_bishop_queen_moves(board_t* board, movelist_t* ml, 
 										movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
@@ -263,13 +349,18 @@ static void generate_bishop_queen_moves(const board_t* board, movelist_t* ml,
 		add_quiet_move(board, (move & ~occ), i, ml);
 		add_capture_move(board, (move & board->pos.occ[oc]), i, cl);
 
+		/* generate bishop & queen cache */
+		board->pos.cache.attack[s] |= move & ~board->pos.occ[s];
+		board->pos.cache.defend[s] |= move & ~board->pos.occ[oc];
+		board->pos.cache.mobility[i] += ACE_POPCNT64(move & ~board->pos.occ[s]);
+
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
 	}
 }
 
 
-static void generate_rook_queen_moves(const board_t* board, movelist_t* ml, 
+static void generate_rook_queen_moves(board_t* board, movelist_t* ml, 
 									  movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
@@ -295,13 +386,18 @@ static void generate_rook_queen_moves(const board_t* board, movelist_t* ml,
 		add_quiet_move(board, (move & ~occ), i, ml);
 		add_capture_move(board, (move & board->pos.occ[oc]), i, cl);
 
+		/* generate bishop & queen cache */
+		board->pos.cache.attack[s] |= move & ~board->pos.occ[s];
+		board->pos.cache.defend[s] |= move & ~board->pos.occ[oc];
+		board->pos.cache.mobility[i] += ACE_POPCNT64(move & ~board->pos.occ[s]);
+
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
 	}
 }
 
 
-static void generate_pawn_moves(const board_t* board, movelist_t* ml, 
+static void generate_pawn_moves(board_t* board, movelist_t* ml, 
 								movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
@@ -323,6 +419,8 @@ static void generate_pawn_moves(const board_t* board, movelist_t* ml,
 
 		move = pawn_movelist[s][i] & ~occ;
 		capture = (pawn_capturelist[s][i] & board->pos.occ[oc]);
+
+		board->pos.cache.pawned[s] |= pawn_capturelist[s][i];
 
 		/* If move is non-zero, it means a pawn is able to move.  If it is moving
 		   to the en passant square, add another move if we can. */
@@ -355,7 +453,7 @@ static void generate_pawn_moves(const board_t* board, movelist_t* ml,
 }
 
 
-static void generate_king_moves(const board_t* board, movelist_t* ml, 
+static void generate_king_moves(board_t* board, movelist_t* ml, 
 								movelist_t* cl, const u64 occ)
 {
 	side_color_t s, oc;
@@ -374,7 +472,7 @@ static void generate_king_moves(const board_t* board, movelist_t* ml,
 	assert(is_valid_index(board->pos.king_sq[s]));
 
 	/* get all attacked positions */
-	opp = attacking(board, oc);
+	opp = board->pos.cache.attack[oc];
 
 	/* get all legal moves of this king */
 	moves = king_movelist[i];
@@ -382,6 +480,11 @@ static void generate_king_moves(const board_t* board, movelist_t* ml,
 	/* AND in ~opp to ensure the king cannot move to an attacked position */
 	add_quiet_move(board, (moves & ~occ & ~opp), i, ml);
 	add_capture_move(board, (moves & board->pos.occ[oc] & ~opp), i, cl);
+
+	/* update cache values */
+	board->pos.cache.attack[s] |= moves & ~board->pos.occ[s];
+	board->pos.cache.defend[s] |= moves & ~board->pos.occ[oc];
+	board->pos.cache.mobility[i] = ACE_POPCNT64(moves & ~board->pos.occ[s]);
 
 	/* generate castling moves */
 	castle_bits = (board->castle & (3 << (2 * s)));
@@ -392,7 +495,7 @@ static void generate_king_moves(const board_t* board, movelist_t* ml,
 		j = bitscan_8bit[castle_bits];
 		c = (1 << j);
 
-		/* ray attacked OR path occupied */
+		/* ray attacked OR path occupied OR check */
 		bad = (castle_ray[c] & opp) | (castle_unocc[c] & occ) | check;
 		if (!bad) add_special_move(board, castle_movelist[c], i, ml, castle_side[c]);
 
@@ -401,7 +504,7 @@ static void generate_king_moves(const board_t* board, movelist_t* ml,
 }
 
 
-u32 generate_moves(const board_t* board, movelist_t* ml, movelist_t *cl)
+u32 generate_moves(board_t* board, movelist_t* ml, movelist_t *cl)
 {
 	u64 occ;
 
@@ -415,10 +518,12 @@ u32 generate_moves(const board_t* board, movelist_t* ml, movelist_t *cl)
 
 	memset(&board->pos.cache, 0, sizeof(eval_cache_t));
 
-	generate_rook_queen_moves(board, ml, cl, occ);
-	generate_bishop_queen_moves(board, ml, cl, occ);
-	generate_knight_moves(board, ml, cl, occ);
+	generate_cache(board, (~board->side & 0x01));
+
 	generate_pawn_moves(board, ml, cl, occ);
+	generate_knight_moves(board, ml, cl, occ);
+	generate_bishop_queen_moves(board, ml, cl, occ);
+	generate_rook_queen_moves(board, ml, cl, occ);
 	generate_king_moves(board, ml, cl, occ);
 
 	board->pos.cache.valid = TRUE;
@@ -443,6 +548,9 @@ piece_t remove_piece(board_t* board, const u32 sq)
 	type = piece_type(piece);
 
 	assert(sqbb & board->pos.piece[color][type]);
+
+	/* invalidate the cache */
+	board->pos.cache.valid = FALSE;
 
 	/* hash out the piece */
 	board->key ^= hash_piece[color][type][sq];
@@ -495,6 +603,9 @@ void add_piece(board_t* board, const u32 sq, const piece_t piece)
 	/* assert that sq is empty */
 	assert(!((board->pos.occ[WHITE] | board->pos.occ[BLACK]) & sqbb));
 
+	/* invalidate the cache */
+	board->pos.cache.valid = FALSE;
+
 	/* hash in the piece */
 	board->key ^= hash_piece[color][type][sq];
 
@@ -544,6 +655,9 @@ piece_t move_piece(board_t* board, const u32 from, const u32 to)
 
 	assert(frombb & board->pos.piece[color][type]);
 	assert(!((board->pos.occ[WHITE] | board->pos.occ[BLACK]) & tobb));
+
+	/* invalidate the cache */
+	board->pos.cache.valid = FALSE;
 
 	/* hash out from, in to */
 	board->key ^= hash_piece[color][type][from];

@@ -150,6 +150,7 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 	assert(app);
 
 	app->search.nodes++;
+	node.depth = depth;
 
 	/* max depth */
 	if (app->board->ply > (SEARCH_MAXDEPTH - 1)) {
@@ -399,6 +400,8 @@ void think(app_t *app)
 
 	/* iterative deepening */
 	for (i = 1; i < app->search.depth; i++) {
+		root.depth = i;
+
 		val = alpha_beta(app, &root, -MATE, MATE, i);
 
 		if (app->mode == IUCI) {
