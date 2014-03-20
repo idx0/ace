@@ -105,10 +105,13 @@ int check(const board_t* board, const side_color_t s)
 }
 
 
+/* calling this function also updates cache variables to the extent it can 
+   reasonably do so */
 u64 attacking(const board_t* board, const side_color_t s)
 {
 	u64 pieces, occ, friendly, ret = 0ULL;
-	u32 i;
+	u32 sq;
+	side_color_t oc = (~s & 0x01);
 
 	assert(board);
 	assert(is_valid_index(board->pos.king_sq[s]));
@@ -119,39 +122,59 @@ u64 attacking(const board_t* board, const side_color_t s)
 	/* pawns */
 	pieces = board->pos.piece[s][PAWN];
 	while (pieces) {
-		i = ACE_LSB64(pieces);
-		ret |= pawn_capturelist[s][i] & friendly;
-		pieces ^= (1ULL << i);
+		sq = ACE_LSB64(pieces);
+		ret |= pawn_capturelist[s][sq];
+		/* we'll need to generate pawn moves as well, but we can do that in
+		   another function */
+		board->pos.cache.mobility[sq] |= pawn_capturelist[s][sq] & friendly;
+		pieces ^= (1ULL << sq);
 	}
 
 	/* kinghts */
 	pieces = board->pos.piece[s][KNIGHT];
 	while (pieces) {
-		i = ACE_LSB64(pieces);
-		ret |= knight_movelist[i] & friendly;
-		pieces ^= (1ULL << i);
+		sq = ACE_LSB64(pieces);
+		ret |= knight_movelist[sq];
+		board->pos.cache.mobility[sq] |= knight_movelist[sq] & friendly;
+		pieces ^= (1ULL << sq);
 	}
 
 	/* bishops & queens */
 	pieces = (board->pos.piece[s][BISHOP] | board->pos.piece[s][QUEEN]);
 	while (pieces) {
-		i = ACE_LSB64(pieces);
-		ret |= magic_bishop(i, occ) & friendly;
-		pieces ^= (1ULL << i);
+		sq = ACE_LSB64(pieces);
+		ret |= magic_bishop(sq, occ);
+		board->pos.cache.mobility[sq] |= magic_bishop(sq, occ) & friendly;
+		pieces ^= (1ULL << sq);
 	}
 
 	/* rooks & queens */
 	pieces = (board->pos.piece[s][ROOK] | board->pos.piece[s][QUEEN]);
 	while (pieces) {
-		i = ACE_LSB64(pieces);
-		ret |= magic_rook(i, occ) & friendly;
-		pieces ^= (1ULL << i);
+		sq = ACE_LSB64(pieces);
+		ret |= magic_rook(sq, occ);
+		board->pos.cache.mobility[sq] |= magic_rook(sq, occ) & friendly;
+		pieces ^= (1ULL << sq);
 	}
 
 	/* kings */
-	ret |= king_movelist[board->pos.king_sq[s]] & friendly;
+	ret |= king_movelist[board->pos.king_sq[s]];
+	board->pos.cache.mobility[sq] |= king_movelist[board->pos.king_sq[s]] & friendly;
 
-	return ret;
+	/* at this point ret is equal to any position on the board that a piece of
+	   side s can reach */
+
+	/* positions we can attack are equal to every position we can get to that
+	   has an opponent occupying it */
+	board->pos.cache.attack[s] = ret & board->pos.occ[s];
+	/* likewise, positions we can defend are equal to every position we can get
+	   to that has a friendly on it */
+	board->pos.cache.defend[s] = ret & board->pos.occ[oc];
+
+	/* now, we can AND either of these bitboard with a position to see if we can
+	   attack it or defend it with the given color */
+
+	return ret & friendly;
 }
 
 
@@ -175,6 +198,8 @@ int is_attacked(const board_t* board, const u32 sq, const side_color_t s)
 		(att & (1ULL << board->enpas)) &&
 		(board->pos.piece[oc][PAWN] & sqbb) &&
 		(pawn_enpas_move[oc][file(board->enpas)] == sqbb)) {
+		/* set the enpas square pawn as attacked */
+		board->pos.cache.attack[s] |= sqbb;
 		return TRUE;
 	}
 
@@ -388,11 +413,15 @@ u32 generate_moves(const board_t* board, movelist_t* ml, movelist_t *cl)
 	cl->count = 0;
 	occ = board->pos.occ[WHITE] | board->pos.occ[BLACK];
 
+	memset(&board->pos.cache, 0, sizeof(eval_cache_t));
+
 	generate_rook_queen_moves(board, ml, cl, occ);
 	generate_bishop_queen_moves(board, ml, cl, occ);
 	generate_knight_moves(board, ml, cl, occ);
 	generate_pawn_moves(board, ml, cl, occ);
 	generate_king_moves(board, ml, cl, occ);
+
+	board->pos.cache.valid = TRUE;
 
 	return ((ml == cl) ? ml->count : ml->count + cl->count);
 }

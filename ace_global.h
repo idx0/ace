@@ -193,6 +193,13 @@ extern void do_null_move(board_t* board, undolist_t* ul);
 extern void undo_null_move(board_t* board, undolist_t* ul);
 
 /**
+ * Generates cache data for the given side
+ * @param board The board structure
+ * @param s The side color to generate cache data for
+ */
+extern void generate_cache(board* board_t, const side_color_t s);
+
+/**
  * Checks if the king for side color s is in check
  * @return TRUE if check, FALSE otherwise
  */

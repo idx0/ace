@@ -154,6 +154,17 @@ typedef struct undolist {
 	u32 count;
 } undolist_t;
 
+typedef struct eval_cache {
+	/* A bitboard representing the sqaures defended by a color */
+	u64 defend[2];
+	/* A bitboard representing the squares attacked by a color */
+	u64 attack[2];
+	/* A table representing the mobility of the piece at a given square */
+	u8 mobility[64];
+	/* This variable is set to true if the cache data is valid */
+	int valid;
+} eval_cache_t;
+
 typedef struct position {
 	/* bitboard which represents all pieces */
 	u64 piece[2][6];
@@ -173,6 +184,9 @@ typedef struct position {
 	int material[2];
 	/* bitboard which represents all occupied sq for this color */
 	u64 occ[2];
+	/* a cache of values pre-computed for free during move generation that can
+	   be later used to help evaluation */
+	eval_cache_t cache;
 } position_t;
 
 #define HASH_NONE	0
