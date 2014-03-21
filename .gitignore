@@ -225,6 +225,7 @@ oli/
 data/
 tscp181/
 brucemo/
+vice/
 ace
 test
 *.o

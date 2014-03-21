@@ -65,7 +65,7 @@ static int check_material_draw(board_t *board)
 }
 
 
-static int evaluate_pawns(board_t *board, const side_color_t c)
+static int evaluate_pawns(board_t *board, const side_color_t s)
 {
 	int score = 0;
 	u64 bb;
@@ -74,24 +74,12 @@ static int evaluate_pawns(board_t *board, const side_color_t c)
 
 	assert(board);
 
-	bb = board->pos.piece[c][PAWN];
+	bb = board->pos.piece[s][PAWN];
 
 	while (bb) {
-		sq = ACE_LSB64(bb);
+		sq = flipsq[s][ACE_LSB64(bb)];
 
 		score += pawn_pcsq[sq];
-
-		if (pawn_isolated[sq] & board->pos.piece[c][PAWN]) {
-			score += pawn_score_isolated;
-		}
-
-		if (pawn_passed[c][sq] & board->pos.piece[oc][PAWN]) {
-			score += pawn_score_passed[rank(sq)];
-		}
-
-		if (pawn_passed[c][sq] & board->pos.piece[c][PAWN]) {
-			score += pawn_score_backward[rank(sq)];
-		}
 
 		bb ^= (1ULL << sq);
 	}
@@ -104,26 +92,20 @@ int evaluate(board_t* board)
 {
 	const int sign[2] = { 1, -1 };
 	int score = 0, c;
+	side_color_t us, them;
 
 	assert(board);
 
+	them = (~board->side & 0x01);
+	us = board->side;
+
 	/* first, just subtract the materials */
-	score = board->pos.material[WHITE] - board->pos.material[BLACK];
+	score = board->pos.material[us] - board->pos.material[them];
 
 	/* check for draws */
 	if (check_material_draw(board)) return 0;
 
 	/* evaluate pieces */
-	for (c = 0; c < 2; c++) {
-		score += sign[c] * evaluate_pawns(board, c);
-	}
-
-
-	/* flip the value of score based on side (or else this function will be
-	   asymetrical) */
-	if (board->side == WHITE) {
-		return score;
-	} else {
-		return -score;
-	}
+	score += evaluate_pawns(board, us);
+	score -= evaluate_pawns(board, them);
 }

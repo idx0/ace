@@ -59,8 +59,11 @@ u8 castle_rook_to[64];
 u8 castle_rook_from[64];
 /* This array defines the castle permissions for a given square */
 extern u8 castle_permission[64];
+/* The rank of the pawn en passant sqaure for each color */
 extern board_rank_t pawn_enpas_rank[2]; 
+/* The rank of the pawn double move square for each color */
 extern board_rank_t pawn_double_rank[2];
+/* An array of promoted types */
 extern piece_type_t promoted_type[4];
 /* piece material values */
 extern int piece_material_values[6];
@@ -74,15 +77,25 @@ extern int rook_pcsq[64];
 extern int queen_pcsq[64];
 extern int king_pcsq[64];
 extern int king_endgame_pcsq[64];
-/* pawn isolation and passing tables */
-extern int pawn_passed[2][64];
-extern int pawn_isolated[64];
+
+/* pawn position tables for passed pawns (or also backward pawns) */
+extern u64 pawn_passed[2][64];
+/* pawn position tables for isolated pawns */
+extern u64 pawn_isolated[8];
+/* position flip table for board squares */
+extern u32 flipsq[2][64];
+/* rank masks */
+extern u64 bboard_ranks[8];
+/* file masks */
+extern u64 bboard_files[8];
+
 extern int pawn_score_isolated;
 extern int pawn_score_passed[8];
 extern int pawn_score_backward[8];
 /* LvvMva array */
 extern int move_score_mvvlva[6][6];
 extern int move_score_special[16];
+
 #ifdef CALCULATE_RAYS
 /* These bitboards are the "rays" used to move rooks, bishops, and queens.
    When generating the actual moves these pieces can make, we draw a ray in
@@ -108,6 +121,7 @@ enum ray_dir { TOPLEFT = 0, NORTHWEST = 0,
 u64* ray_list[8];
 #define is_positive_ray(rd) ((rd) <= RIGHT)
 #endif
+
 /* bitboards representing the outer squares and the inner 6 squares */
 #define outer_squares 0xff818181818181ff
 #define inner_squares 0x007e7e7e7e7e7e00

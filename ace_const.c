@@ -125,6 +125,28 @@ int move_score_mvvlva[6][6] = {
 	{ 10100, 10200, 10300, 10300, 10500, 10600 }
 };
 
+u64 bboard_files[8] = {
+	0x8080808080808080ULL,
+	0x4040404040404040ULL,
+	0x2020202020202020ULL,
+	0x1010101010101010ULL,
+	0x0808080808080808ULL,
+	0x0404040404040404ULL,
+	0x0202020202020202ULL,
+	0x0101010101010101ULL
+};
+
+u64 bboard_ranks[8] = {
+	0x00000000000000ffULL,
+	0x000000000000ff00ULL,
+	0x0000000000ff0000ULL,
+	0x00000000ff000000ULL,
+	0x000000ff00000000ULL,
+	0x0000ff0000000000ULL,
+	0x00ff000000000000ULL,
+	0xff00000000000000ULL
+};
+
 /* move scores for certain special moves (en passant captures, castles, and
    promotions are non-zero */
 int move_score_special[16] = {
@@ -141,10 +163,29 @@ int pawn_score_passed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 };
 int pawn_score_backward[8] = { 0, -5, -10, -20, -35, -60, 0, 0 };
 
 /* TODO */
-int pawn_passed[2][64];
-int pawn_isolated[64];
+u64 pawn_passed[2][64];
+u64 pawn_isolated[64];
 
 board_rank_t pawn_enpas_rank[2] = { R3, R6 };
 board_rank_t pawn_double_rank[2] = { R4, R5 };
 piece_type_t promoted_type[4] = { KNIGHT, BISHOP, ROOK, QUEEN };
-int piece_material_values[6] = { 100, 325, 335, 550, 1000, 50000 };
+int piece_material_values[6] = { 100, 320, 325, 521, 954, 420 }
+
+u32 flipsq[2][64] = {
+	{ A1, B1, C1, D1, E1, F1, G1, H1,
+	  A2, B2, C2, D2, E2, F2, G2, H2,
+	  A3, B3, C3, D3, E3, F3, G3, H3,
+	  A4, B4, C4, D4, E4, F4, G4, H4,
+	  A5, B5, C5, D5, E5, F5, G5, H5,
+	  A6, B6, C6, D6, E6, F6, G6, H6,
+	  A7, B7, C7, D7, E7, F7, G7, H7,
+	  A8, B8, C8, D8, E8, F8, G8, H8 },
+	{ A8, B8, C8, D8, E8, F8, G8, H8,
+	  A7, B7, C7, D7, E7, F7, G7, H7,
+	  A6, B6, C6, D6, E6, F6, G6, H6,
+	  A5, B5, C5, D5, E5, F5, G5, H5,
+	  A4, B4, C4, D4, E4, F4, G4, H4,
+	  A3, B3, C3, D3, E3, F3, G3, H3,
+	  A2, B2, C2, D2, E2, F2, G2, H2,
+	  A1, B1, C1, D1, E1, F1, G1, H1, }
+};

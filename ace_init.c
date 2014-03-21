@@ -273,6 +273,50 @@ static void init_pawns()
 }
 
 
+static void init_evalboards()
+{
+	u32 i, c, r, f;
+	u32 s, e;
+
+	/* fill in the files */
+	for (c = 0; c < 2; c++) {
+		for (i = 0; i < 64; i++) {
+			s = (file(i) - 1 < 0 ? 0 : file(i) - 1);
+			e = (file(i) + 1 > FH ? FH : file(i) + 1);
+			pawn_passed[c][i] = 0ULL;
+
+			for (f = s; f <= e; f++) {
+				pawn_passed[c][i] |= bboard_files[f];
+			}
+		}	
+	}
+
+	/* remove the ranks below/above the pawn */
+	for (i = 0; i < 64; i++) {
+		for (c = 0; c < 2; c++) {
+			if (c == WHITE) {
+				s = R1;
+				e = rank(i);
+			} else {
+				s = rank(i);
+				e = R8;
+			}
+
+			for (r = s; r <= e; r++) {
+				passed_pawn[c][i] &= ~bboard_ranks[r];
+			}
+		}	
+	}
+
+	/* create isolated pawn maps */
+	pawn_isolated[0] = bboard_files[FB];
+	for (i = 1; i < 7; i++) {
+		pawn_isolated[i] = (bboard_files[i - 1] | bboard_files[i + 1]);
+	}
+	pawn_isolated[7] = bboard_files[FG];
+}
+
+
 void init_movelists()
 {
 	int i;
@@ -317,6 +361,8 @@ void init_movelists()
 	init_diagonals();
 	init_pawns();
 	init_castling();
+
+	init_evalboards();
 }
 
 
