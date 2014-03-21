@@ -68,12 +68,13 @@ static int check_material_draw(board_t *board)
 static int evaluate_pawns(board_t *board, const side_color_t s)
 {
 	int score = 0;
-	u64 bb;
+	u64 bb, mask, raw;
 	u32 sq;
+	side_color_t oc = (~s & 0x01);
 
 	assert(board);
 
-	bb = board->pos.piece[s][PAWN];
+	raw = bb = board->pos.piece[s][PAWN];
 
 	while (bb) {
 		sq = ACE_LSB64(bb);
@@ -82,10 +83,17 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 		score += pawn_pcsq[flipsq[s][sq]];
 
 		/* is the pawn isolated */
+		if (!(pawn_isolated[file(sq)] & raw)) score += 0;
 		/* is the pawn backward */
+		if (ACE_POPCNT64(pawn_passed[s][sq] & raw) == 
+			ACE_POPCNT64(pawn_isolated[file(sq)] & raw)) score += 0;
 		/* is the pawn connected */
+		mask = (pawn_isolated[file(sq)] & bboard_rank[rank(sq)]);
+		if (ACE_POPCNT64(raw & mask) > 0) score += 0;
 		/* is this a passed pawn */
+		if (!(pawn_passed[s][sq] & board->pos.piece[oc][PAWN])) score += 0;
 		/* is this a double pawn */
+		if (ACE_POPCNT64(raw & bboard_files[file(sq)]) > 1) score += 0;
 
 		bb ^= (1ULL << sq);
 	}
