@@ -78,7 +78,14 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 	while (bb) {
 		sq = ACE_LSB64(bb);
 
+		/* add in piece square table value */
 		score += pawn_pcsq[flipsq[s][sq]];
+
+		/* is the pawn isolated */
+		/* is the pawn backward */
+		/* is the pawn connected */
+		/* is this a passed pawn */
+		/* is this a double pawn */
 
 		bb ^= (1ULL << sq);
 	}
