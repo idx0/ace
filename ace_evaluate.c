@@ -70,16 +70,15 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 	int score = 0;
 	u64 bb;
 	u32 sq;
-	side_color_t oc = (~c & 0x01);
 
 	assert(board);
 
 	bb = board->pos.piece[s][PAWN];
 
 	while (bb) {
-		sq = flipsq[s][ACE_LSB64(bb)];
+		sq = ACE_LSB64(bb);
 
-		score += pawn_pcsq[sq];
+		score += pawn_pcsq[flipsq[s][sq]];
 
 		bb ^= (1ULL << sq);
 	}
@@ -90,8 +89,7 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 
 int evaluate(board_t* board)
 {
-	const int sign[2] = { 1, -1 };
-	int score = 0, c;
+	int score = 0;
 	side_color_t us, them;
 
 	assert(board);
@@ -108,4 +106,6 @@ int evaluate(board_t* board)
 	/* evaluate pieces */
 	score += evaluate_pawns(board, us);
 	score -= evaluate_pawns(board, them);
+
+	return score;
 }

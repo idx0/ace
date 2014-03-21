@@ -164,12 +164,12 @@ int pawn_score_backward[8] = { 0, -5, -10, -20, -35, -60, 0, 0 };
 
 /* TODO */
 u64 pawn_passed[2][64];
-u64 pawn_isolated[64];
+u64 pawn_isolated[8];
 
 board_rank_t pawn_enpas_rank[2] = { R3, R6 };
 board_rank_t pawn_double_rank[2] = { R4, R5 };
 piece_type_t promoted_type[4] = { KNIGHT, BISHOP, ROOK, QUEEN };
-int piece_material_values[6] = { 100, 320, 325, 521, 954, 420 }
+int piece_material_values[6] = { 100, 320, 325, 521, 954, 420 };
 
 u32 flipsq[2][64] = {
 	{ A1, B1, C1, D1, E1, F1, G1, H1,
@@ -187,5 +187,5 @@ u32 flipsq[2][64] = {
 	  A4, B4, C4, D4, E4, F4, G4, H4,
 	  A3, B3, C3, D3, E3, F3, G3, H3,
 	  A2, B2, C2, D2, E2, F2, G2, H2,
-	  A1, B1, C1, D1, E1, F1, G1, H1, }
+	  A1, B1, C1, D1, E1, F1, G1, H1 }
 };

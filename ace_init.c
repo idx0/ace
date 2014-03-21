@@ -303,7 +303,7 @@ static void init_evalboards()
 			}
 
 			for (r = s; r <= e; r++) {
-				passed_pawn[c][i] &= ~bboard_ranks[r];
+				pawn_passed[c][i] &= ~bboard_ranks[r];
 			}
 		}	
 	}
