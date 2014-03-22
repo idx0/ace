@@ -165,6 +165,10 @@ typedef struct eval_cache {
 	u8 mobility[64];
 	/* This variable is set to true if the cache data is valid */
 	int valid;
+	/* the pawn structure hash */
+	u64 pawn_key;
+	/* a list of open files for each color */
+	u8 open_file[2];
 } eval_cache_t;
 
 typedef struct position {
