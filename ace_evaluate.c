@@ -27,6 +27,9 @@ static int check_material_draw(board_t *board)
 {
 	assert(board);
 
+	/* this function assumes that kings will never be captured and are therefore
+	   always in the piece list */
+
 	/* king vs. king */
 	if (board->pos.npieces == 2) return TRUE;
 
@@ -76,6 +79,7 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 
 	raw = bb = board->pos.piece[s][PAWN];
 
+	/* loop through all pawns on the side */
 	while (bb) {
 		sq = ACE_LSB64(bb);
 
@@ -88,12 +92,21 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 		if (ACE_POPCNT64(pawn_passed[s][sq] & raw) == 
 			ACE_POPCNT64(pawn_isolated[file(sq)] & raw)) score += 0;
 		/* is the pawn connected */
-		mask = (pawn_isolated[file(sq)] & bboard_rank[rank(sq)]);
+		mask = (pawn_isolated[file(sq)] & bboard_ranks[rank(sq)]);
 		if (ACE_POPCNT64(raw & mask) > 0) score += 0;
 		/* is this a passed pawn */
 		if (!(pawn_passed[s][sq] & board->pos.piece[oc][PAWN])) score += 0;
 		/* is this a double pawn */
 		if (ACE_POPCNT64(raw & bboard_files[file(sq)]) > 1) score += 0;
+		/* is a rook pawn */
+		if ((file(sq) == FH) || (file(sq) == FA)) score += 0;
+		/* TODO:
+			check for pawns defended by other pawns
+			check for pawns guarding a king on the first rank
+			check for pawn chains
+			checked for pinned pawns
+		 */
+
 
 		bb ^= (1ULL << sq);
 	}
@@ -119,6 +132,9 @@ int evaluate(board_t* board)
 	if (check_material_draw(board)) return 0;
 
 	/* evaluate pieces */
+
+	/* evaluate pawns - it may be meaningful to add a a pawn hash table which
+	   can then be checked in order to forgoe pawn evaluation */
 	score += evaluate_pawns(board, us);
 	score -= evaluate_pawns(board, them);
 
