@@ -70,14 +70,19 @@ static int check_material_draw(board_t *board)
 
 static int evaluate_pawns(board_t *board, const side_color_t s)
 {
+	static const first_rank[2] = { R1, R8 };
 	int score = 0;
-	u64 bb, mask, raw;
-	u32 sq;
+	u64 bb, mask, raw, occ;
+	u32 sq, i, cnt;
 	side_color_t oc = (~s & 0x01);
 
 	assert(board);
 
 	raw = bb = board->pos.piece[s][PAWN];
+	occ = (board->pos.occ[WHITE] | board->pos.occ[BLACK]);
+
+	/* set all files to open */
+	board->pos.cache.open_file[s] = 0xff;
 
 	/* loop through all pawns on the side */
 	while (bb) {
@@ -86,32 +91,94 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 		/* add in piece square table value */
 		score += pawn_pcsq[flipsq[s][sq]];
 
+		/* clear open bit */
+		board->pos.cache.open_file[s] &= ~(1 << file(sq));
+
 		/* is the pawn isolated */
 		if (!(pawn_isolated[file(sq)] & raw)) score += 0;
+		
 		/* is the pawn backward */
 		if (ACE_POPCNT64(pawn_passed[s][sq] & raw) == 
 			ACE_POPCNT64(pawn_isolated[file(sq)] & raw)) score += 0;
+		
 		/* is the pawn connected */
 		mask = (pawn_isolated[file(sq)] & bboard_ranks[rank(sq)]);
 		if (ACE_POPCNT64(raw & mask) > 0) score += 0;
+		
 		/* is this a passed pawn */
 		if (!(pawn_passed[s][sq] & board->pos.piece[oc][PAWN])) score += 0;
+		
 		/* is this a double pawn */
 		if (ACE_POPCNT64(raw & bboard_files[file(sq)]) > 1) score += 0;
+		
 		/* is a rook pawn */
 		if ((file(sq) == FH) || (file(sq) == FA)) score += 0;
-		/* TODO:
-			check for pawns defended by other pawns
-			check for pawns guarding a king on the first rank
-			check for pawn chains
-			checked for pinned pawns
-		 */
+		
+		/* check if this pawn is defended by other pawns */
+		if (board->pos.cache.pawned[s] & (1ULL << sq)) score += 0;
 
+		/* check if this pawn is immobile (move list and capture list are zero) */
+		if ((!(pawn_movelist[s][sq] & ~occ)) &&
+			(!(pawn_capturelist[s][sq] & board->pos.occ[oc]))) score += 0;
 
 		bb ^= (1ULL << sq);
 	}
 
+	board->pos.cache.pawn_chained[s] = 0;
+	board->pos.cache.pawn_guarded[s] = 0;
+
+	/* check for pawns guarding a king on the first rank */
+	if (rank(board->pos.king_sq[s]) == first_rank[s]) {
+		board->pos.cache.pawn_guarded[s] =
+			ACE_POPCNT64(raw & king_movelist[board->pos.king_sq[s]]);
+	}
+
+	/* check for pawn chains */
+	for (i = 0; i < 9; i++) {
+		cnt = ACE_POPCNT64(pawn_chain_ne[i] & raw);
+		if (cnt >= 3) board->pos.cache.pawn_chained[s] += cnt;
+
+		cnt = ACE_POPCNT64(pawn_chain_nw[i] & raw);
+		if (cnt >= 3) board->pos.cache.pawn_chained[s] += cnt;
+	}
+
 	return score;
+}
+
+
+static void calculate_bishop_xrays(board_t* board, const side_color_t s)
+{
+	u64 pieces, occ, att;
+	u64 blks[2], xray[2];
+	u32 sq;
+
+	occ = (board->pos.occ[WHITE] | board->pos.occ[BLACK]);
+	pieces = (board->pos.piece[s][BISHOP] | board->pos.piece[s][QUEEN]);
+
+	while (pieces) {
+		sq = ACE_LSB64(pieces);
+		
+		att = magic_bishop(sq, occ);
+		blks[WHITE] = att & board->pos.occ[WHITE];	/* defended pieces */
+		blks[BLACK] = att & board->pos.occ[BLACK];	/* attacked pieces */
+
+		pieces ^= (1ULL << sq);
+	}
+
+	/* battery - 2 diagonal pieces with the same target */
+	/* discovered attack - */
+	/* discovered check - */
+	/* pin - */
+	/* absolute pin - */
+	/* partial pin - */
+	/* skewer - */
+	/* x-ray - */
+}
+
+
+static void calculate_rook_xrays(board_t* board, const side_color_t s)
+{
+	
 }
 
 
@@ -137,6 +204,9 @@ int evaluate(board_t* board)
 	   can then be checked in order to forgoe pawn evaluation */
 	score += evaluate_pawns(board, us);
 	score -= evaluate_pawns(board, them);
+
+	/* do x-rays */
+	/* do exchanges */
 
 	return score;
 }

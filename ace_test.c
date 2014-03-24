@@ -28,4 +28,33 @@
 #include "ace_zobrist.h"
 #include "ace_magic.h"
 
-/* todo */
+void test()
+{
+	u64 pieces, occ, att;
+	u64 blks[2], xray[2];
+	fen_state_t fen;
+	board_t board;
+	u32 sq;
+
+	fen_init(&fen);
+	fen_use_ptr(&fen, &board);
+	fen_parse(&fen, FEN_KIWIPETE, strlen(FEN_KIWIPETE));
+	fen_destroy(&fen);
+
+	occ = (board.pos.occ[WHITE] | board.pos.occ[BLACK]);
+	pieces = board.pos.piece[WHITE][BISHOP];
+
+//	while (pieces) {
+		sq = ACE_MSB64(pieces);
+
+		att = magic_bishop(sq, occ);
+		blks[WHITE] = att & board.pos.occ[WHITE];
+		blks[BLACK] = att & board.pos.occ[BLACK];
+
+		print_bboard(att);
+		print_bboard(blks[WHITE]);
+		print_bboard(blks[BLACK]);
+
+//		pieces ^= (1ULL << sq);
+//	}
+}

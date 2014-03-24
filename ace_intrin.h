@@ -133,6 +133,7 @@ extern u64 get_interval(const ms_time_t *then, const ms_time_t* now);
 #ifdef ACE_WINDOWS
 # define strtok2(str, delim, ctx) (strtok_s(str, delim, ctx))
 # define sscanf(str, fmt, ...) (sscanf_s(str, fmt, __VA_ARGS__))
+# define snprintf sprintf_s
 #else
 # if defined(_SVID_SOURCE) || defined(_BSD_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || defined(_POSIX_SOURCE)
 #  define strtok2(str, delim, ctx) (strtok_r(str, delim, ctx))

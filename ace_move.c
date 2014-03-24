@@ -566,6 +566,7 @@ piece_t remove_piece(board_t* board, const u32 sq)
 	switch (type) {
 		case PAWN:
 			board->pos.pawns ^= sqbb;
+			board->pos.cache.pawn_key ^= hash_piece[color][PAWN][sq];
 			break;
 		case KNIGHT:
 		case BISHOP:
@@ -620,6 +621,7 @@ void add_piece(board_t* board, const u32 sq, const piece_t piece)
 	switch (type) {
 		case PAWN:
 			board->pos.pawns ^= sqbb;
+			board->pos.cache.pawn_key ^= hash_piece[color][PAWN][sq];
 			break;
 		case KNIGHT:
 		case BISHOP:
@@ -662,6 +664,11 @@ piece_t move_piece(board_t* board, const u32 from, const u32 to)
 	/* hash out from, in to */
 	board->key ^= hash_piece[color][type][from];
 	board->key ^= hash_piece[color][type][to];
+
+	if (type == PAWN) {
+		board->pos.cache.pawn_key ^= hash_piece[color][PAWN][from];
+		board->pos.cache.pawn_key ^= hash_piece[color][PAWN][to];
+	}
 
 	/* clear from piece */
 	board->pos.squares[from] = INVALID_PIECE;

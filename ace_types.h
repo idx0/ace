@@ -167,7 +167,12 @@ typedef struct eval_cache {
 	int valid;
 	/* the pawn structure hash */
 	u64 pawn_key;
-	/* a list of open files for each color */
+	/* the number of chained pawns (for chains >= 3) */
+	u8 pawn_chained[2];
+	/* the number of pawns guarding the king */
+	u8 pawn_guarded[2];
+	/* a list of open files for each color - this can be used to determine both
+	   half and fully open files */
 	u8 open_file[2];
 } eval_cache_t;
 

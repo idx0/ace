@@ -599,6 +599,8 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
                     app->search.depth = tmp;
                 think(app);
             }
+        } else if (strncmp(ptr, "test", 4) == 0) {
+            test();
         } else if (strncmp(ptr, "ls", 7) == 0) {
             process_ls(app);
         } else if (strncmp(ptr, "info", 4) == 0) {

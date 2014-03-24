@@ -95,6 +95,10 @@ extern int pawn_score_backward[8];
 /* LvvMva array */
 extern int move_score_mvvlva[6][6];
 extern int move_score_special[16];
+/* these are pawn diagonal tables used to mask with the pawn position in order
+   to find pawn chains */
+extern u64 pawn_chain_ne[9];
+extern u64 pawn_chain_nw[9];
 
 #ifdef CALCULATE_RAYS
 /* These bitboards are the "rays" used to move rooks, bishops, and queens.
@@ -125,6 +129,8 @@ u64* ray_list[8];
 /* bitboards representing the outer squares and the inner 6 squares */
 #define outer_squares 0xff818181818181ff
 #define inner_squares 0x007e7e7e7e7e7e00
+
+extern void test();
 
 /**
  * Initializes the precomputed movelist arrays
@@ -231,17 +237,20 @@ extern void perft_kiwipete();
 extern void pertf_runtests();
 
 /**
- *
+ * Evaluates the given board position relative to the side to move
+ * @param board The board structure
  */
 extern int evaluate(board_t* board);
 
 /**
- *
+ * Perform iterative deepening search on the given board position
+ * @param app A pointer to the  application handle
  */
 extern void think(app_t *app);
 
 /**
  * The "checkup" function which looks for input on stdin
+ * @param app A pointer to the  application handle
  */
 extern void checkup(app_t *app);
 
@@ -292,15 +301,41 @@ extern int process_command(app_t *app, char *sz, size_t len);
  */
 extern int input_ready();
 
+/**
+ * Initializes the hash table to the number of mb given
+ * @param table A pointer to the hash table structure
+ * @param mb The size of the table in MB
+ */
 extern void init_hash(hash_table_t *table, u16 mb);
+
+/**
+ *
+ * @param table A pointer to the hash table structure
+ */
 extern void store_hash(hash_table_t *table, board_t *board, const move_t move,
                        int score, int flags, int depth);
 
+/**
+ *
+ * @param table A pointer to the hash table structure
+ */
 extern int probe_hash(hash_table_t *table, board_t *board, move_t *outmove,
                       int *outscore, int depth, int alpha, int beta);
+
+/**
+ * Probes the hash table for a stored move at the given key
+ * @param table A pointer to the hash table structure
+ * @param boardkey The hash to probe
+ * @return The move associated with the given board key
+ */
 extern move_t probe_hash_move(hash_table_t *table, u64 boardkey);
 
-
-
+/**
+ * Initializes the UCI procotol mode
+ */
 extern void init_uci();
+
+/**
+ *
+ */
 extern int parse_uci(app_t *app, char *sz, size_t len);
