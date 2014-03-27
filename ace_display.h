@@ -21,6 +21,7 @@
 #include "ace_types.h"
 
 extern void print_bboard(const u64 bb);
+extern void print_bboard2(const u64 bb, const u64 bb2);
 extern void print_board(const board_t* b);
 /**
  * Prints a string representation of the move.  This function is NOT thread safe.

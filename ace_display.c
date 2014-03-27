@@ -49,6 +49,45 @@ void print_bboard(const u64 bb)
 }
 
 
+void print_bboard2(const u64 bb, const u64 bb2)
+{
+	int f, r;
+	u8 i;
+
+	for (r = 8; r > 0; r--) {
+		printf(" %d ", r);
+
+		for (f = 0; f < 8; f++) {
+			i = from_rank_file(r - 1, f);
+			assert(is_valid_index(i));
+
+			if (set(bb, i)) {
+				printf("x ");
+			} else {
+				printf(". ");
+			}
+		}
+
+		printf("   ");
+
+		for (f = 0; f < 8; f++) {
+			i = from_rank_file(r - 1, f);
+			assert(is_valid_index(i));
+
+			if (set(bb2, i)) {
+				printf("x ");
+			} else {
+				printf(". ");
+			}
+		}
+
+		printf("\n");
+	}
+
+	printf("   a b c d e f g h    a b c d e f g h\n");
+}
+
+
 void print_board(const board_t* b)
 {
 	int f, r;
