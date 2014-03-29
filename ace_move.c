@@ -471,8 +471,13 @@ static void generate_king_moves(board_t* board, movelist_t* ml,
 
 	assert(is_valid_index(board->pos.king_sq[s]));
 
+#ifdef GENERATE_OPP_ATTACKS
 	/* get all attacked positions */
 	opp = board->pos.cache.attack[oc];
+#else
+	opp = C64(0);
+	check = C64(0);
+#endif
 
 	/* get all legal moves of this king */
 	moves = king_movelist[i];
@@ -488,7 +493,9 @@ static void generate_king_moves(board_t* board, movelist_t* ml,
 
 	/* generate castling moves */
 	castle_bits = (board->castle & (3 << (2 * s)));
+#ifdef GENERATE_OPP_ATTACKS	
 	check = (board->pos.piece[s][KING] & opp);
+#endif
 
 	moves = 0ULL;
 	while (castle_bits) {
@@ -518,7 +525,9 @@ u32 generate_moves(board_t* board, movelist_t* ml, movelist_t *cl)
 
 	memset(&board->pos.cache, 0, sizeof(eval_cache_t));
 
+#ifdef GENERATE_OPP_ATTACKS
 	generate_cache(board, (~board->side & 0x01));
+#endif
 
 	generate_pawn_moves(board, ml, cl, occ);
 	generate_knight_moves(board, ml, cl, occ);

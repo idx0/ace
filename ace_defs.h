@@ -65,5 +65,15 @@
    ALPHA entries, even when the depth is deeper */
 /* #define DONT_BEAT_EXACT */
 
-
+/* If this is defined, the opponents attacks are computed during move generation.
+   There are specific pros and cons here:
+   PROS:
+     - Able to cache attacking position to calculate defenders & x-rays
+     - Will eliminate do_move/undo_move pairs in search, especially in endgame
+       when the king is particularly mobile
+   CONS:
+   	 - Extra computation of all opposing pieces
+	 - Unnecessary due to check calculation in do_move()
+ */
+#define GENERATE_OPP_ATTACKS
 
