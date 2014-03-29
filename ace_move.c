@@ -194,7 +194,7 @@ void generate_cache(board_t* board, const side_color_t s)
 		tmp = knight_movelist[sq];
 		board->pos.cache.attack[s] |= tmp;
 		board->pos.cache.defend[s] |= tmp;
-		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+		board->pos.cache.piece[sq].mobility = ACE_POPCNT64(tmp & friendly);
 
 		pieces ^= (1ULL << sq);
 	}
@@ -207,7 +207,7 @@ void generate_cache(board_t* board, const side_color_t s)
 		tmp = magic_bishop(sq, occ);
 		board->pos.cache.attack[s] |= tmp;
 		board->pos.cache.defend[s] |= tmp;
-		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+		board->pos.cache.piece[sq].mobility = ACE_POPCNT64(tmp & friendly);
 		
 		pieces ^= (1ULL << sq);
 	}
@@ -220,7 +220,7 @@ void generate_cache(board_t* board, const side_color_t s)
 
 		board->pos.cache.attack[s] |= tmp;
 		board->pos.cache.defend[s] |= tmp;
-		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+		board->pos.cache.piece[sq].mobility = ACE_POPCNT64(tmp & friendly);
 		
 		pieces ^= (1ULL << sq);
 	}
@@ -233,7 +233,7 @@ void generate_cache(board_t* board, const side_color_t s)
 
 		board->pos.cache.attack[s] |= tmp;
 		board->pos.cache.defend[s] |= tmp;
-		board->pos.cache.mobility[sq] = ACE_POPCNT64(tmp & friendly);
+		board->pos.cache.piece[sq].mobility = ACE_POPCNT64(tmp & friendly);
 		
 		pieces ^= (1ULL << sq);
 	}
@@ -242,7 +242,7 @@ void generate_cache(board_t* board, const side_color_t s)
 	/* kings */
 	board->pos.cache.attack[s] |= king_movelist[board->pos.king_sq[s]];
 	board->pos.cache.defend[s] |= king_movelist[board->pos.king_sq[s]];
-	board->pos.cache.mobility[board->pos.king_sq[s]] =
+	board->pos.cache.piece[board->pos.king_sq[s]].mobility =
 		ACE_POPCNT64(king_movelist[board->pos.king_sq[s]] & friendly);
 
 	/* at this point ret is equal to any position on the board that a piece of
@@ -314,7 +314,7 @@ static void generate_knight_moves(board_t* board, movelist_t* ml,
 		/* generate knight cache */
 		board->pos.cache.attack[s] |= knight_movelist[i] & ~board->pos.occ[s];
 		board->pos.cache.defend[s] |= knight_movelist[i] & ~board->pos.occ[oc];
-		board->pos.cache.mobility[i] =
+		board->pos.cache.piece[i].mobility =
 			ACE_POPCNT64(knight_movelist[i] & ~board->pos.occ[s]);
 
 		/* xor out the bit we just checked */
@@ -352,7 +352,7 @@ static void generate_bishop_queen_moves(board_t* board, movelist_t* ml,
 		/* generate bishop & queen cache */
 		board->pos.cache.attack[s] |= move & ~board->pos.occ[s];
 		board->pos.cache.defend[s] |= move & ~board->pos.occ[oc];
-		board->pos.cache.mobility[i] += ACE_POPCNT64(move & ~board->pos.occ[s]);
+		board->pos.cache.piece[i].mobility += ACE_POPCNT64(move & ~board->pos.occ[s]);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -389,7 +389,7 @@ static void generate_rook_queen_moves(board_t* board, movelist_t* ml,
 		/* generate bishop & queen cache */
 		board->pos.cache.attack[s] |= move & ~board->pos.occ[s];
 		board->pos.cache.defend[s] |= move & ~board->pos.occ[oc];
-		board->pos.cache.mobility[i] += ACE_POPCNT64(move & ~board->pos.occ[s]);
+		board->pos.cache.piece[i].mobility += ACE_POPCNT64(move & ~board->pos.occ[s]);
 
 		/* xor out the bit we just checked */
 		pieces ^= (1ULL << i);
@@ -489,13 +489,17 @@ static void generate_king_moves(board_t* board, movelist_t* ml,
 	/* update cache values */
 	board->pos.cache.attack[s] |= moves & ~board->pos.occ[s];
 	board->pos.cache.defend[s] |= moves & ~board->pos.occ[oc];
-	board->pos.cache.mobility[i] = ACE_POPCNT64(moves & ~board->pos.occ[s]);
+	board->pos.cache.piece[i].mobility = ACE_POPCNT64(moves & ~board->pos.occ[s]);
 
 	/* generate castling moves */
 	castle_bits = (board->castle & (3 << (2 * s)));
 #ifdef GENERATE_OPP_ATTACKS	
 	check = (board->pos.piece[s][KING] & opp);
 #endif
+
+	/* NOTE: We don't actually need to check for check here, since we will do
+	   that when we actually perform the move.  However, since we are evaluating
+	   both sides for move ordering, we may as well. */
 
 	moves = 0ULL;
 	while (castle_bits) {

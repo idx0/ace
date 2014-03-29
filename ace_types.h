@@ -154,6 +154,20 @@ typedef struct undolist {
 	u32 count;
 } undolist_t;
 
+/* This is a piece-wise evaluation cache - we can use this to get useful information
+   about pieces located on each square */
+typedef struct eval_piece_cache {
+	/* a bitboard representing all squares attacking this piece */
+	u64 attacking;
+	/* a bitboard representing all squares defending this piece */
+	u64 defending;
+	/* a table of bitboard representing x-ray data in the form [blocking color]
+	   [attacking/defending color] */
+	u64 xray[2][2];
+	/* the mobility of this piece */
+	u8 mobility;
+} eval_piece_cache_t;
+
 typedef struct eval_cache {
 	/* A bitboard representing the sqaures defended by a color */
 	u64 defend[2];
@@ -162,7 +176,7 @@ typedef struct eval_cache {
 	/* A bitboard representing the squares pawns of the given color can attack */
 	u64 pawned[2];
 	/* A table representing the mobility of the piece at a given square */
-	u8 mobility[64];
+	eval_piece_cache_t piece[64];
 	/* This variable is set to true if the cache data is valid */
 	int valid;
 	/* the pawn structure hash */
