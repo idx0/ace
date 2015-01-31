@@ -17,11 +17,12 @@
  */
 
 #include <assert.h>
+#include <stdio.h>
 
 #include "ace_types.h"
 #include "ace_magic.h"
-#include "ace_global.h"
 #include "ace_zobrist.h"
+#include "ace_global.h"
 
 static void add_quiet_move(const board_t *board, const u64 bboard,
 						   const u32 from, movelist_t *ml)
@@ -42,6 +43,9 @@ static void add_quiet_move(const board_t *board, const u64 bboard,
 			ml->scores[ml->count] = 9000;
 		/* otherwise, use the value from the history */
 		else {
+		/* here we may want to be smarter and not use such a basic heuristic.
+		   perhaps a relative history heuristic or something that takes into
+		   account tempo moves (threats/checks) */
 			p = board->pos.squares[from];
 			ml->scores[ml->count] = 
 				board->history[piece_color(p)][piece_type(p)][to] & 0x1fff;
@@ -124,7 +128,7 @@ u64 attacking(const board_t* board, const side_color_t s)
 		pieces ^= (1ULL << sq);
 	}
 
-	/* kinghts */
+	/* knights */
 	pieces = board->pos.piece[s][KNIGHT];
 	while (pieces) {
 		sq = ACE_LSB64(pieces);
@@ -182,11 +186,12 @@ void generate_cache(board_t* board, const side_color_t s)
 		/* don't worry about pawn mobility */
 		board->pos.cache.attack[s] |= tmp;
 		board->pos.cache.pawned[s] |= tmp;
+		board->pos.cache.piece[sq].attacking = tmp;
 
 		pieces ^= (1ULL << sq);
 	}
 
-	/* kinghts */
+	/* knights */
 	pieces = board->pos.piece[s][KNIGHT];
 	while (pieces) {
 		sq = ACE_LSB64(pieces);
@@ -194,6 +199,7 @@ void generate_cache(board_t* board, const side_color_t s)
 		tmp = knight_movelist[sq];
 		board->pos.cache.attack[s] |= tmp;
 		board->pos.cache.defend[s] |= tmp;
+		board->pos.cache.piece[sq].attacking = tmp;
 		board->pos.cache.piece[sq].mobility = ACE_POPCNT64(tmp & friendly);
 
 		pieces ^= (1ULL << sq);
@@ -386,7 +392,7 @@ static void generate_rook_queen_moves(board_t* board, movelist_t* ml,
 		add_quiet_move(board, (move & ~occ), i, ml);
 		add_capture_move(board, (move & board->pos.occ[oc]), i, cl);
 
-		/* generate bishop & queen cache */
+		/* generate rook & queen cache */
 		board->pos.cache.attack[s] |= move & ~board->pos.occ[s];
 		board->pos.cache.defend[s] |= move & ~board->pos.occ[oc];
 		board->pos.cache.piece[i].mobility += ACE_POPCNT64(move & ~board->pos.occ[s]);
@@ -481,6 +487,8 @@ static void generate_king_moves(board_t* board, movelist_t* ml,
 
 	/* get all legal moves of this king */
 	moves = king_movelist[i];
+
+	if (moves == 0) return;		/* smothered or mated? */
 
 	/* AND in ~opp to ensure the king cannot move to an attacked position */
 	add_quiet_move(board, (moves & ~occ & ~opp), i, ml);

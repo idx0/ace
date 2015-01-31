@@ -49,25 +49,6 @@
 enum fen_parse_state { FEN_RANK_BEGIN = 0, FEN_RANK_END, FEN_SIDE,
 					   FEN_CASTLING, FEN_ENPAS, FEN_HALF, FEN_FULL, FEN_COMPLETE };
 
-/* returns TRUE if c is a valid value for rank */
-int isrank(const char c);
-
-/* returns TRUE if c is a valid value for file */
-int isfile(const char c);
-
-/* returns TRUE if c is non-zero (1-9) */
-int isnonzero(const char c);
-
-/* returns TRUE if c is zero (0) */
-int iszero(const char c);
-
-/* returns TRUE if c is a white piece */
-int iswhite(const char c);
-
-/* returns TRUE if c is a black piece */
-int isblack(const char c);
-
-#define isnumber(c) (isnonzero(c) || iszero(c))
 
 /* this structure is used to keep fen state */
 typedef struct fen_state {

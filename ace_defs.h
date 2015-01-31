@@ -17,6 +17,10 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined (_WIN64)
 # define ACE_WIN64
 # define ACE_WINDOWS
@@ -77,3 +81,6 @@
  */
 #define GENERATE_OPP_ATTACKS
 
+#ifdef __cplusplus
+}
+#endif

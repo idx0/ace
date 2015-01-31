@@ -17,6 +17,10 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "ace_defs.h"
 
 #define upper(x) (((x) >> 32) & 0xffffffff)
@@ -26,6 +30,7 @@
 
 #if defined (__GNUC__)
   /* GCC or Equivalent */
+# define __inline inline
 # define ALIGN64 __attribute__((aligned(8)))
 # define ALIGN32 __attribute__((aligned(4)))
 # define FORCE_INLINE __attribute__((always_inline))
@@ -140,4 +145,8 @@ extern u64 get_interval(const ms_time_t *then, const ms_time_t* now);
 # else
 #  define strtok2(str, delim, ctx) (strtok(str, delim))
 # endif
+#endif
+
+#ifdef __cplusplus
+}
 #endif

@@ -23,69 +23,7 @@
 #include "ace_fen.h"
 #include "ace_global.h"
 #include "ace_zobrist.h"
-
-int isrank(const char c)
-{
-	return (isnonzero(c) && (c != '9'));
-}
-
-
-int isfile(const char c)
-{
-	return ((c >= 'a') && (c <= 'h'));
-}
-
-
-int isnonzero(const char c)
-{
-	return ((c >= '1') && (c <= '9'));
-}
-
-
-int iszero(const char c)
-{
-	return (c == '0');
-}
-
-
-int iswhite(const char c)
-{
-	return ((c == 'P') || (c == 'N') || (c == 'B') ||
-			(c == 'R') || (c == 'Q') || (c == 'K'));
-}
-
-
-int isblack(const char c)
-{
-	return ((c == 'p') || (c == 'n') || (c == 'b') ||
-			(c == 'r') || (c == 'q') || (c == 'k'));
-}
-
-
-static piece_t from_char(const char c)
-{
-	piece_t p = INVALID_PIECE;
-	set_piece_color(p, WHITE);
-
-	/* is c a valid character */
-	switch (c) {
-		case 'p': set_piece_color(p, BLACK);
-		case 'P': set_piece_type(p, PAWN); break;
-		case 'n': set_piece_color(p, BLACK);
-		case 'N': set_piece_type(p, KNIGHT); break;
-		case 'b': set_piece_color(p, BLACK);
-		case 'B': set_piece_type(p, BISHOP); break;
-		case 'r': set_piece_color(p, BLACK);
-		case 'R': set_piece_type(p, ROOK); break;
-		case 'q': set_piece_color(p, BLACK);
-		case 'Q': set_piece_type(p, QUEEN); break;
-		case 'k': set_piece_color(p, BLACK);
-		case 'K': set_piece_type(p, KING); break;
-		default: break;
-	}
-
-	return p;
-}
+#include "ace_str.h"
 
 
 static int read_delimiting_space(fen_state_t *fen, const char *str, size_t len, int rc)
@@ -139,7 +77,7 @@ static int parse_rank(fen_state_t *fen, const char *str, size_t len)
 				file_cnt += (c - '0');
 			} else if (iswhite(c) || isblack(c)) {
 				/* TODO: add piece */
-				p = from_char(c);
+				p = piece_from_char(c);
 				index = from_rank_file(7 - rank_cnt, file_cnt);
 
 				if (is_valid_index(index)) {

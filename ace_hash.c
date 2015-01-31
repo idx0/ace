@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "ace_intrin.h"
 #include "ace_types.h"

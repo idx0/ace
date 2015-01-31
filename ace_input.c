@@ -23,6 +23,8 @@
 #include "ace_fen.h"
 #include "ace_global.h"
 #include "ace_display.h"
+#include "ace_pgn.h"
+#include "ace_str.h"
 
 static piece_type_t process_piece_type(char c)
 {
@@ -149,8 +151,12 @@ move_t process_algebraic(board_t* board, const char *sz,
     	c = sz[i];
 
     	if (isfile(c)) {
-    		if (move_think == TBEGIN) {
-    			move_think = TPAWN;
+			if (move_think == TBEGIN) {
+				move_think = TPAWN;
+			} else if (move_think == TPAWN) {
+				/* bishop move */
+				move_think = TQUIET;
+				piece = process_piece_type(c);
     		} else if (dest_file != 0) {
                 move_think = TERROR;
             }
@@ -528,18 +534,18 @@ static void process_ls(app_t *app)
     char *sz;
 
     assert(app);
-    assert(app->board);
+	assert(app->game.board);
 
-    print_board(app->board);
+	print_board(app->game.board);
     printf("\n");
 
     ul.count = 0;
-    generate_moves(app->board, &ml, &ml);
+	generate_moves(app->game.board, &ml, &ml);
 
     for (i = 0; i < ml.count; i++) {
-        if (do_move(app->board, &ul, ml.moves[i])) {
+		if (do_move(app->game.board, &ul, ml.moves[i])) {
             /* the move is ok, the king is not left in check */
-            sz = str_algebraic(app->board->pos.squares[move_to(ml.moves[i])], ml.moves[i]);
+			sz = str_algebraic(app->game.board->pos.squares[move_to(ml.moves[i])], ml.moves[i]);
             s = strlen(sz);
 
             if ((cnt + s) > 80) {
@@ -550,13 +556,15 @@ static void process_ls(app_t *app)
             cnt += s + 1;
             printf("%s ", sz);
 
-            undo_move(app->board, &ul);
+			undo_move(app->game.board, &ul);
         }
     }
 
     printf("\n");
 }
 
+
+#define PGN_DB "F:\\Games\\round1.pgn"
 
 static int process_ace_command(app_t *app, char *sz, size_t len)
 {
@@ -574,7 +582,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
         if ((strncmp(ptr, "print", 5) == 0) ||
             is_shorthand(ptr, cmdlen, 'p')) {
             printf("\n");
-            print_board(app->board);
+			print_board(app->game.board);
         } else if (strncmp(ptr, "fen", 3) == 0) {
             app->mode = IFEN;
         } else if ((strncmp(ptr, "move", 4) == 0) ||
@@ -603,15 +611,27 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
             test();
         } else if (strncmp(ptr, "ls", 7) == 0) {
             process_ls(app);
-        } else if (strncmp(ptr, "info", 4) == 0) {
+        } else if (strncmp(ptr, "pgn", 3) == 0) {
+			pgn_open(&app->pgn, PGN_DB);
+
+			while (pgn_parse(&app->pgn) == PGN_SUCCESS) {
+				pgntree_add(&app->pgn.tree, &app->pgn.game);
+
+				pgn_new_game(&app->pgn);
+			}
+
+//			pgn_close(&app->pgn);
+		} else if (strncmp(ptr, "tree", 4) == 0) {
+			pgntree_print(&app->pgn, &app->game);
+		} else if (strncmp(ptr, "info", 4) == 0) {
             return command_info(app, &ctx);
         } else if (strncmp(ptr, "help", 4) == 0) {
         } else {
             /* maybe this is a move */
-            if ((m = process_algebraic(app->board, sz, len, app->board->side))) {
-                do_move(app->board, &app->ul, m);
-            } else if ((m = process_long_notation(app->board, sz, len, app->board->side))) {
-                do_move(app->board, &app->ul, m);
+			if ((m = process_algebraic(app->game.board, sz, len, app->game.board->side))) {
+				do_move(app->game.board, &app->game.undo, m);
+			} else if ((m = process_long_notation(app->game.board, sz, len, app->game.board->side))) {
+				do_move(app->game.board, &app->game.undo, m);
             } else {
                 return FALSE;
             }
@@ -638,11 +658,11 @@ int process_command(app_t *app, char *sz, size_t len)
         switch (app->mode)
         {
             case IMOVE:
-                process_moves(app->board, &app->ul, sz, len, app->board->side);
+				process_moves(app->game.board, &app->game.undo, sz, len, app->game.board->side);
                 break;
             case IFEN:
                 fen_init(&fen);
-                fen_use_ptr(&fen, app->board);
+				fen_use_ptr(&fen, app->game.board);
                 fen_parse(&fen, sz, len);
                 fen_destroy(&fen);
                 app->mode = IACE;

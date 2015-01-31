@@ -15,10 +15,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
 
 #include "ace_intrin.h"
 #include "ace_types.h"
 #include "ace_fen.h"
+#include "ace_pgn.h"
+
+typedef struct ace_app
+{
+	/* the game, allocated by the application */
+	game_t game;
+	/* the pgn library for the current application */
+	pgn_t pgn;
+	/* true if the application should quit */
+	int quit;
+	/* the current input mode */
+	input_mode_t mode;
+	/* search data for this app */
+	searchdata_t search;
+	/* application wide transposition table */
+	hash_table_t hash;
+	/* the side the application is playing */
+	side_color_t side;
+} app_t;
 
 /* This file defines global, precomputed bitboards and other values.  We are
    not concerned with memory here */
@@ -139,6 +159,10 @@ extern void init_movelists();
 extern void init_app(app_t *app);
 extern void init_startpos(app_t *app);
 extern void destroy_app(app_t *app);
+
+/* initializes a new game */
+extern void new_game(game_t* game);
+
 /* Returns a bitboard representing all the squares attacked by side s.  This 
  * does not include the pawn who made an en passant move.
  * @param board The board structure

@@ -372,11 +372,11 @@ void init_app(app_t *app)
 
 	app->mode = IACE;
 	app->quit = FALSE;
-	app->board = (board_t *)malloc(sizeof(board_t));
+	app->game.board = (board_t *)malloc(sizeof(board_t));
 
-	if (app->board) {
-		memset(app->board, 0, sizeof(board_t));
-		memset(app->board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
+	if (app->game.board) {
+		memset(app->game.board, 0, sizeof(board_t));
+		memset(app->game.board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
 
 		init_startpos(app);
 	}
@@ -399,10 +399,10 @@ void init_startpos(app_t *app)
 	assert(app);
 
 	fen_init(&fen);
-	fen_use_ptr(&fen, app->board);
+	fen_use_ptr(&fen, app->game.board);
 	fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
 	fen_destroy(&fen);
-	app->ul.count = 0;
+	app->game.undo.count = 0;
 }
 
 
@@ -410,6 +410,24 @@ void destroy_app(app_t *app)
 {
 	assert(app);
 
-	free(app->board);
+	free(app->game.board);
 	xfree(app->hash.record);
+}
+
+
+void new_game(game_t* game)
+{
+	fen_state_t fen;
+
+	/* initialize our ace board, we will use this to validate moves */
+	memset(game->board, 0, sizeof(board_t));
+	memset(game->board->pos.squares, INVALID_PIECE, 64 * sizeof(u8));
+
+	game->undo.count = 0;
+
+	/* initialize the starting position from FEN */
+	fen_init(&fen);
+	fen_use_ptr(&fen, game->board);
+	fen_parse(&fen, FEN_OPENING, strlen(FEN_OPENING));
+	fen_destroy(&fen);
 }

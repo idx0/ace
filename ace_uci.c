@@ -42,10 +42,10 @@ static int process_uci_move(app_t *app, char *sz, size_t len)
     move_t m;
 
     if (sz) {
-        m = process_long_notation(app->board, sz, len, app->board->side);
+		m = process_long_notation(app->game.board, sz, len, app->game.board->side);
 
         if (m) {
-            do_move(app->board, &app->ul, m);
+			do_move(app->game.board, &app->game.undo, m);
         } else {
         	return FALSE;
         }
@@ -85,10 +85,10 @@ int parse_uci_position(app_t *app, char **ctx)
 				fenlen++;
 
 				fen_init(&fen);
-	            fen_use_ptr(&fen, app->board);
+				fen_use_ptr(&fen, app->game.board);
 	            fen_parse(&fen, fenbuf, fenlen);
 	            fen_destroy(&fen);
-	            app->ul.count = 0;
+				app->game.undo.count = 0;
 			} else {
 				/* parse words as fen string pieces */
 				for (j = 0; ((j < cmdlen) && (fenlen < 254)); j++, fenlen++) {

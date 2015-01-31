@@ -17,7 +17,6 @@
  */
 
 #include "ace_thread.h"
-#include "ace_global.h"
 #include "ace_types.h"
 
 #define MAX_THREADS	64

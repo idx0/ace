@@ -30,8 +30,8 @@ static int repetitions(const app_t *app)
 {
 	unsigned int i;
 
-	for (i = app->ul.count - app->board->half; i < app->ul.count; i++) {
-		if (app->board->key == app->ul.undo[i].key) return TRUE;
+	for (i = app->game.undo.count - app->game.board->half; i < app->game.undo.count; i++) {
+		if (app->game.board->key == app->game.undo.undo[i].key) return TRUE;
 	}
 
 	return FALSE;
@@ -88,16 +88,16 @@ int quiescent(app_t *app, cnodeptr_t parent, int alpha, int beta)
 	app->search.nodes++;
 
 	/* max depth */
-	if (app->board->ply > (SEARCH_MAXDEPTH - 1)) {
-		return evaluate(app->board);
+	if (app->game.board->ply > (SEARCH_MAXDEPTH - 1)) {
+		return evaluate(app->game.board);
 	}
 
 	/* draws */
-	if (repetitions(app) || (app->board->half >= 100)) {
+	if (repetitions(app) || (app->game.board->half >= 100)) {
 		return 0;
 	}
 
-	score = evaluate(app->board);
+	score = evaluate(app->game.board);
 
 	if (score >= beta) return beta;
 	/* delta pruning based on a material value of delta (this should be disabled
@@ -109,19 +109,19 @@ int quiescent(app_t *app, cnodeptr_t parent, int alpha, int beta)
 
 
 	/* generate moves (with separate captures) */
-	generate_moves(app->board, &node.ml, &node.cl);
+	generate_moves(app->game.board, &node.ml, &node.cl);
 
 	for (i = 0; i < node.cl.count; i++) {
 		/* get the next move ordered */
 		next_move(i, &node.cl);
 
-		if (!(do_move(app->board, &app->ul, node.cl.moves[i])))
+		if (!(do_move(app->game.board, &app->game.undo, node.cl.moves[i])))
 			continue;
 
 		score = -quiescent(app, &node, -beta, -alpha);
 
 		node.made++;
-		undo_move(app->board, &app->ul);
+		undo_move(app->game.board, &app->game.undo);
 
 		if (score > alpha) {
 			if (score >= beta) {
@@ -153,23 +153,23 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 	node.depth = depth;
 
 	/* max depth */
-	if (app->board->ply > (SEARCH_MAXDEPTH - 1)) {
+	if (app->game.board->ply > (SEARCH_MAXDEPTH - 1)) {
 		/* return evaluate(app->board); */
 		return quiescent(app, parent, alpha, beta);
 	}
 
 	/* recursive base */
 	if (depth == 0) {
-		return evaluate(app->board);
+		return evaluate(app->game.board);
 	}
 
 	/* draws */
-	if (repetitions(app) || (app->board->half >= 100)) {
+	if (repetitions(app) || (app->game.board->half >= 100)) {
 		return 0;
 	}
 
 	/* if we are checked, set the nodes checked flag */
-	if (check(app->board, app->board->side)) {
+	if (check(app->game.board, app->game.board->side)) {
 		node.flags |= NODE_CHECK;
 		/* extend our search by 1 depth if we are in check */
 		/* NOTES: we may want to NOT extend our search here if the parent
@@ -177,14 +177,20 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 		depth++;
 	}
 
+	/* TODO:
+	     - NULL moves
+	     - Late-move reduction
+	     - Tactical extensions (pins & forks -> depth++)
+	 */
+
 	/* probe our table */
-	if (probe_hash(&app->hash, app->board, &cutoff, &score, depth, alpha, beta) == TRUE) {
+	if (probe_hash(&app->hash, app->game.board, &cutoff, &score, depth, alpha, beta) == TRUE) {
 		app->hash.cut++;
 		return score;
 	}
 
 	/* generate moves */
-	generate_moves(app->board, &node.ml, &node.ml);
+	generate_moves(app->game.board, &node.ml, &node.ml);
 
 	/* reset score */
 	score = -MATE;
@@ -204,13 +210,13 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 		/* get the next move ordered */
 		next_move(i, &node.ml);
 
-		if (!(do_move(app->board, &app->ul, node.ml.moves[i])))
+		if (!(do_move(app->game.board, &app->game.undo, node.ml.moves[i])))
 			continue;
 
 		score = -alpha_beta(app, &node, -beta, -alpha, depth - 1);
 
 		node.made++;
-		undo_move(app->board, &app->ul);
+		undo_move(app->game.board, &app->game.undo);
 
 		/* score whatever is best so far */
 		if (score > highest) {
@@ -223,13 +229,13 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 
 					/* non-captures causing beta cutoffs (killers) */
 					if (!is_capture(node.ml.moves[i])) {
-						app->board->killers[1][app->board->ply] =
-							app->board->killers[0][app->board->ply];
-						app->board->killers[0][app->board->ply] = node.ml.moves[i];
+						app->game.board->killers[1][app->game.board->ply] =
+							app->game.board->killers[0][app->game.board->ply];
+						app->game.board->killers[0][app->game.board->ply] = node.ml.moves[i];
 					}
 
 					/* store this beta in our transposition table */
-					store_hash(&app->hash, app->board, node.best, beta, HASH_BETA, depth);
+					store_hash(&app->hash, app->game.board, node.best, beta, HASH_BETA, depth);
 
 					return beta;
 				}
@@ -239,8 +245,8 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 
 				/* update our history */
 				if (!is_capture(node.best)) {
-					p = app->board->pos.squares[move_from(node.best)];
-					app->board->history[piece_color(p)][piece_type(p)][move_to(node.best)] += depth;
+					p = app->game.board->pos.squares[move_from(node.best)];
+					app->game.board->history[piece_color(p)][piece_type(p)][move_to(node.best)] += depth;
 				}
 			}
 		}
@@ -249,7 +255,7 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 	/* check for checkmate or stalemate */
 	if (!node.made) {
 		if (node.flags & NODE_CHECK) {
-			return -MATE + app->board->ply;
+			return -MATE + app->game.board->ply;
 		} else {
 			return 0;
 		}
@@ -257,10 +263,10 @@ int alpha_beta(app_t *app, cnodeptr_t parent, int alpha, int beta, int depth)
 
 	if (alpha != palpha) {
 		/* store this as an exact, since we beat alpha */
-		store_hash(&app->hash, app->board, node.best, highest, HASH_EXACT, depth);
+		store_hash(&app->hash, app->game.board, node.best, highest, HASH_EXACT, depth);
 	} else {
 		/* store the current alpha */
-		store_hash(&app->hash, app->board, node.best, alpha, HASH_ALPHA, depth);
+		store_hash(&app->hash, app->game.board, node.best, alpha, HASH_ALPHA, depth);
 	}
 
 	return alpha;
@@ -271,7 +277,7 @@ static int find_move(app_t *app, move_t m)
 {
 	int i;
 	movelist_t ml;
-	generate_moves(app->board, &ml, &ml);
+	generate_moves(app->game.board, &ml, &ml);
 
 	for (i = 0; i < ml.count; i++) {
 		if (ml.moves[i] == m) return TRUE;
@@ -289,20 +295,20 @@ static int print_pv(app_t *app, int depth)
 	move_t mv;
 
 	assert(app);
-	assert(app->board);
+	assert(app->game.board);
 
 #define VIA_PROBE
 #ifdef VIA_PROBE
 	/* get the current position */
-	mv = probe_hash_move(&app->hash, app->board->key);
+	mv = probe_hash_move(&app->hash, app->game.board->key);
 	
 	while ((mv != 0) && (count < depth)) {
 		
 		if (find_move(app, mv)) {
 			from = move_from(mv);
-			p = app->board->pos.squares[from];
+			p = app->game.board->pos.squares[from];
 
-			if (do_move(app->board, &app->ul, mv)) {
+			if (do_move(app->game.board, &app->game.undo, mv)) {
 				app->search.pv[count++] = mv;
 
 				print_algebraic(p, mv);
@@ -314,7 +320,7 @@ static int print_pv(app_t *app, int depth)
 			break;
 		}
 
-		mv = probe_hash_move(&app->hash, app->board->key);
+		mv = probe_hash_move(&app->hash, app->game.board->key);
 	}
 #else
 	while (app->search.pv[count]) {
@@ -336,8 +342,8 @@ static int print_pv(app_t *app, int depth)
 	}
 #endif
 	
-	while(app->board->ply) {
-		undo_move(app->board, &app->ul);
+	while (app->game.board->ply) {
+		undo_move(app->game.board, &app->game.undo);
 	}
 	
 	return count;
@@ -377,13 +383,13 @@ void think(app_t *app)
 	node_t root;
 
 	assert(app);
-	assert(app->board);
+	assert(app->game.board);
 
 	init_node(&root);
 	root.flags |= NODE_ROOT;
 
 	/* reset our node count board->ply */
-	app->board->ply = 0;
+	app->game.board->ply = 0;
 	app->search.nodes = 0;
 	app->hash.generations++;
 
@@ -392,8 +398,8 @@ void think(app_t *app)
 
 	/* clear search heuristics */
 	memset(app->search.pv, 0, SEARCH_MAXDEPTH * sizeof(move_t));
-	memset(app->board->killers, 0, 2 * SEARCH_MAXDEPTH * sizeof(int));
-	memset(app->board->history, 0, 2 * 6 * 64 * sizeof(int));
+	memset(app->game.board->killers, 0, 2 * SEARCH_MAXDEPTH * sizeof(int));
+	memset(app->game.board->history, 0, 2 * 6 * 64 * sizeof(int));
 
 	/* set the start time */
 	get_current_tick(&app->search.start);

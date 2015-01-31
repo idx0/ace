@@ -18,6 +18,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "ace_intrin.h"
 
 #ifndef TRUE
@@ -29,19 +33,22 @@
 #endif
 
 /* piece definition: piece type */
-typedef enum piece_type { PAWN = 0, KNIGHT, BISHOP, ROOK, QUEEN, KING } piece_type_t;
+typedef enum piece_type { PAWN = 0, KNIGHT, BISHOP, ROOK, QUEEN, KING, INVALID_TYPE = 7} piece_type_t;
 
 /* piece definition: piece color, also used for side */
 typedef enum piece_color { WHITE = 0, BLACK } piece_color_t;
 
 /* board definition: rank row designations R1-R8 */
-typedef enum board_rank { R1 = 0, R2, R3, R4, R5, R6, R7, R8 } board_rank_t;
+typedef enum board_rank { R1 = 0, R2, R3, R4, R5, R6, R7, R8, INVALID_RANK } board_rank_t;
 
 /* board definition: file column designations FA-FH */
-typedef enum board_file { FA = 0, FB, FC, FD, FE, FF, FG, FH } board_file_t;
+typedef enum board_file { FA = 0, FB, FC, FD, FE, FF, FG, FH, INVALID_FILE } board_file_t;
 
 /* side definition: castling permissions (king-side versus queen-side) */
 typedef enum side_castle { WK = 1, WQ = 2, BK = 4, BQ = 8 } side_castle_t;
+
+/* game result */
+typedef enum game_result { WIN_WHITE, WIN_BLACK, DRAW, UNKNOWN_RESULT } game_result_t;
 
 /* algebraic move notation enumeration */
 typedef enum algebraic {
@@ -61,11 +68,18 @@ typedef enum algebraic {
 #define side_color_t piece_color_t
 
 /* this structure defines a piece, as used by our piece list */
+/* piece_t is technically only 4 bits, the upper 4 bits are preserved by
+ * the macros, and can be used to store other information if needed
+ *   [----|c|ttt]
+ * ttt	peice_type_t
+ * c	peice_color_t
+ */
 typedef u8 piece_t;
 
 /* piece setting and getting macros */
-#define piece_type(p)  ((p) & 0x07)
-#define piece_color(p) (((p) & 0x08) >> 3)
+#define piece_type(p)  (piece_type_t)((p) & 0x07)
+#define piece_color(p) (piece_color_t)(((p) & 0x08) >> 3)
+/* preserve upper bits */
 #define set_piece_color(p, c) ((p) = ((p) & 0xf7) | (((c) & 0x01) << 3))
 #define set_piece_type(p, t)  ((p) = ((p) & 0xf8) | ((t) & 0x07))
 
@@ -74,8 +88,8 @@ typedef u8 piece_t;
 #define piece_valid(p) (((p) != INVALID_PIECE) && (piece_type(p) <= KING))
 
 /* rank, file, index conversion macros */
-#define rank(x) (((x) & 0x38) >> 3)
-#define file(x) ((x) & 0x07)
+#define rank(x) (board_rank_t)(((x) & 0x38) >> 3)
+#define file(x) (board_file_t)((x) & 0x07)
 #define is_valid_index(x) ((x) <= 63)
 #define from_rank_file(r, f) ((((r) & 0x07) << 3) | ((f) & 0x07))
 
@@ -83,6 +97,11 @@ typedef u8 piece_t;
 #define set(a, b) ((a) & (C64(1) << (b)))
 
 /* move definitions */
+/* move_t 
+ *   [fedc|ba9876|543210]
+ *   [kind|  to  | from ]
+ *
+ */
 typedef u16 move_t;
 typedef u32 move_ext_t;
 
@@ -102,18 +121,22 @@ typedef u32 move_ext_t;
     1 1 1 0 rook promotion via capture
     1 1 1 1 queen promotion via capture
 */
-enum move_kind { QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
-				 CAPTURE, EP_CAPTURE, KNIGHT_PROMO = 8, BISHOP_PROMO,
-				 ROOK_PROMO, QUEEN_PROMO, KNIGHT_PROMO_CAP,
-				 BISHOP_PROMO_CAP, ROOK_PROMO_CAP, QUEEN_PROMO_CAP } move_kind_t;
+typedef enum move_kind {
+	QUIET = 0, DOUBLE_PAWN, KING_CASTLE, QUEEN_CASTLE,
+	CAPTURE, EP_CAPTURE, KNIGHT_PROMO = 8, BISHOP_PROMO,
+	ROOK_PROMO, QUEEN_PROMO, KNIGHT_PROMO_CAP,
+	BISHOP_PROMO_CAP, ROOK_PROMO_CAP, QUEEN_PROMO_CAP } move_kind_t;
 
 /* from, to, kind */
 #define move_from(m) ((m) & 0x003f)
 #define move_to(m)   (((m) & 0x0fc0) >> 6)
-#define move_kind(m) (((m) & 0xf000) >> 12)
+#define move_kind(m) (move_kind_t)(((m) & 0xf000) >> 12)
 
+/* these macros return non-zero for true, zero for false */
 #define is_promotion(m) (move_kind(m) & 0x08)
 #define is_capture(m) (move_kind(m) & 0x04)
+
+/* this macro returns a 16 bit move_t */
 #define to_move(f, t, k) (((f) & 0x3f) | (((t) & 0x3f) << 6) | (((k) & 0x0f) << 12))
 
 /* these macros return a bitboard with all bits set above and below the given bit */
@@ -313,7 +336,19 @@ typedef struct board {
 	int history[2][6][64];
 } board_t;
 
-typedef enum input_mode { IACE, IUCI, IXBOARD, IMOVE, IFEN } input_mode_t;
+/* a game consists of a board and some moves with a result at the end */
+typedef struct game
+{
+	/* game result */
+	game_result_t result;
+	/* game board */
+	board_t* board;
+	/* list of moves */
+	undolist_t undo;
+} game_t;
+
+
+typedef enum input_mode { IACE, IUCI, IXBOARD, IMOVE, IFEN, IPGN } input_mode_t;
 
 #define SEARCH_DEPTH	1
 #define SEARCH_TIMED	2
@@ -338,19 +373,6 @@ typedef struct searchdata {
 	move_t pv[SEARCH_MAXDEPTH];
 } searchdata_t;
 
-typedef struct ace_app {
-	/* the board, allocated by the application */
-	board_t* board;
-	/* the global undo list for all moves made by the application */
-	undolist_t ul;
-	/* true if the application should quit */
-	int quit;
-	/* the current input mode */
-	input_mode_t mode;
-	/* search data for this app */
-	searchdata_t search;
-	/* application wide transposition table */
-	hash_table_t hash;
-	/* the side the application is playing */
-	side_color_t side;
-} app_t;
+#ifdef __cplusplus
+}
+#endif
