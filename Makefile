@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -Wunused -Wno-format
+CFLAGS := -Wall -Wunused -Wno-format -Wno-unused-function 
 
 OBJS := \
 	ace_util.o \
@@ -11,6 +11,8 @@ OBJS := \
 	ace_magic.o \
 	ace_move.o \
 	ace_input.o \
+	ace_pgn.o \
+	ace_str.o \
 	ace_evaluate.o \
 	ace_search.o \
 	ace_hash.o \

@@ -600,6 +600,7 @@ piece_t remove_piece(board_t* board, const u32 sq)
 		case KING:	/* this better not happen! */
 			board->pos.king_sq[color] = INVALID_SQUARE;
 			break;
+		default: break;
 	}
 
 	return piece;
@@ -655,6 +656,7 @@ void add_piece(board_t* board, const u32 sq, const piece_t piece)
 		case KING:
 			board->pos.king_sq[color] = sq;
 			break;
+		default: break;
 	}
 }
 

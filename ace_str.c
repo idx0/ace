@@ -63,7 +63,7 @@ void str_ltrim_ex(char** sz, const char* pattern)
 	while (*s) {
 		if (str_contains(pattern, *s)) {
 			s++;
-			*sz++;
+			(*sz)++;
 		}
 		else { break; }
 	}

@@ -608,7 +608,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
                 think(app);
             }
         } else if (strncmp(ptr, "test", 4) == 0) {
-            test();
+			/* test(); */
         } else if (strncmp(ptr, "ls", 7) == 0) {
             process_ls(app);
         } else if (strncmp(ptr, "pgn", 3) == 0) {
@@ -645,7 +645,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
 
 //			pgn_close(&app->pgn);
 		} else if (strncmp(ptr, "tree", 4) == 0) {
-			pgntree_print(&app->pgn.tree , &app->game);
+			pgntree_print(&app->pgn.tree, &app->game);
 		} else if (strncmp(ptr, "info", 4) == 0) {
             return command_info(app, &ctx);
         } else if (strncmp(ptr, "help", 4) == 0) {
