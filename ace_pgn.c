@@ -27,6 +27,7 @@
 #include <stdarg.h>
 
 #include "ace_pgn.h"
+#include "ace_columns.h"
 
 #include "ace_intrin.h"
 #include "ace_global.h"
@@ -199,7 +200,12 @@ void pgntree_add(pgn_tree_t* tree, const game_t* game)
 
 		/* update */
 		child->sat.count++;
-		child->sat.points += (game->result == WIN_WHITE ? 10 : (game->result == DRAW ? 5 : 0));
+
+		if (game->board->side == WHITE) {
+			child->sat.points += (game->result == WIN_WHITE ? 10 : (game->result == DRAW ? 5 : 0));
+		} else {
+			child->sat.points += (game->result == WIN_BLACK ? 10 : (game->result == DRAW ? 5 : 0));
+		}
 
 		do_move(g.board, &g.undo, m);
 		parent = child;
@@ -1434,8 +1440,11 @@ void pgntree_print(pgn_tree_t* tree, game_t* game)
 {
 	pgn_node_t *child = NULL, *parent;
 	move_t m;
-	u16 i;
+	u16 i, sum = 0;
+	float *tdi;
+	float* tdf;
 	char buffer[128];
+	table_t *table;
 
 	if ((!tree) || (!tree->root)) return;
 
@@ -1460,15 +1469,41 @@ void pgntree_print(pgn_tree_t* tree, game_t* game)
 	} else {
 		child = parent->eldest;
 
+		tdi = (u16*)malloc(parent->sat.nchild * sizeof(float));
+		tdf = (u16*)malloc(parent->sat.nchild * sizeof(float));
+		i = 0;
+
+		table = table_create(parent->sat.nchild, 2);
+
 		while (child) {
 			write_move(game->board, child->sat.move, buffer, 128);
-			printf("%s (%d) (%1.3f)\n",
-				   buffer,
-				   child->sat.count,
-				   ((float)child->sat.points / 10.0f) / (float)child->sat.count);
 
+			tdi[i] = (float)child->sat.count;
+			tdf[i] = ((float)child->sat.points / 10.0f) / (float)child->sat.count;
+			sum += child->sat.count;
+
+			table_set_key(table, i, buffer);
+			
+			i++;
 			child = child->sibling;
 		}
+
+		if (sum == 0) { sum = 1; }
+		for (i = 0; i < parent->sat.nchild; i++) { 
+			tdi[i] /= (float)sum;
+			tdi[i] *= 100.0f;
+			tdf[i] *= 100.0f;
+		}
+
+		column_from_float(&table->columns[0], ALIGN_RIGHT, "%2.1f %%", tdi);
+		column_from_float(&table->columns[1], ALIGN_RIGHT, "%2.1f %%", tdf);
+
+		table_print(table);
+
+		table_destroy(table);
+
+		free(tdi);
+		free(tdf);
 	}
 }
 
