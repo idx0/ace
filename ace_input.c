@@ -608,7 +608,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
                 think(app);
             }
         } else if (strncmp(ptr, "test", 4) == 0) {
-            test();
+//            test();
         } else if (strncmp(ptr, "ls", 7) == 0) {
             process_ls(app);
         } else if (strncmp(ptr, "pgn", 3) == 0) {
@@ -618,7 +618,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
 			while ((rc = pgn_parse(&app->pgn)) != PGN_ERROR_EOF) {
 				switch (rc) {
 				case PGN_ERROR_GAME:
-					printf("\invalid game parameter [%d]\n", tmp);
+					printf("\ninvalid game parameter [%d]\n", tmp);
 					break;
 				case PGN_ERROR_MOVE:
 					printf("\nillegal move detected [%d]\n", tmp);
@@ -645,7 +645,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
 
 //			pgn_close(&app->pgn);
 		} else if (strncmp(ptr, "tree", 4) == 0) {
-			pgntree_print(&app->pgn, &app->game);
+			pgntree_print(&app->pgn.tree, &app->game);
 		} else if (strncmp(ptr, "info", 4) == 0) {
             return command_info(app, &ctx);
         } else if (strncmp(ptr, "help", 4) == 0) {

@@ -25,6 +25,7 @@
  */
 
 #include <stdarg.h>
+#include <ctype.h>
 
 #include "ace_pgn.h"
 
@@ -934,7 +935,6 @@ static int pgn_parse_materialmove(pgn_t *pgn, movelist_t* ml,
 
 static int pgn_parse_move(pgn_t *pgn, char* buffer, u16 buflen, pgn_token_t hint)
 {
-	pgn_node_t *node = (pgn_node_t*)malloc(sizeof(pgn_node_t));
 	char buf[PARSE_MOVE_BUFLEN];
 	char *s, *p;
 	u16 len = 0, i;
@@ -1123,7 +1123,6 @@ int pgn_parse_moves(pgn_t* pgn, char* buffer, u32 buflen)
 {
 	pgn_token_t token;
 	int rc = PGN_SUCCESS;
-	move_t m;
 
 	if (!pgn) return PGN_ERROR_BADPTR;
 
@@ -1138,7 +1137,6 @@ int pgn_parse_moves(pgn_t* pgn, char* buffer, u32 buflen)
 		case TOKEN_MOVE_CASTLE_LONG:
 		case TOKEN_MOVE_NULL:
 			rc = pgn_parse_move(pgn, buffer, buflen, token);
-			m = pgn->game.undo.undo[pgn->game.undo.count - 1].move;
 
 			/* we can do some things here if we aren't set to strict castling */
 			break;
@@ -1237,7 +1235,7 @@ static int write_move(board_t* board, move_t m, char *buffer, u16 buflen)
 	movelist_t ml;
 	move_t z;
 	piece_type_t p, o;
-	piece_t piece;
+	piece_t piece = INVALID_PIECE;
 	u16 found = 0, ck = 0;
 	char mc = '+';
 	undolist_t ul;
@@ -1527,8 +1525,6 @@ void print_game(undolist_t *ul)
 
 void pgn_new_game(pgn_t* pgn)
 {
-	fen_state_t fen;
-
 	pgn->state = PARSE_GARBAGE;
 
 	new_game(&pgn->game);

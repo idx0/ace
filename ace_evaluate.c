@@ -71,7 +71,7 @@ static int check_material_draw(board_t *board)
 
 static int evaluate_pawns(board_t *board, const side_color_t s)
 {
-	static const first_rank[2] = { R1, R8 };
+	static const board_rank_t first_rank[2] = { R1, R8 };
 	int score = 0;
 	u64 bb, mask, raw, occ;
 	u32 sq, i, cnt;
@@ -149,6 +149,7 @@ static int evaluate_pawns(board_t *board, const side_color_t s)
 
 static void calculate_bishop_xrays(board_t* board, const side_color_t s)
 {
+#if 0
 	u64 pieces, occ, att;
 	u64 blks[2], xray[2];
 	u32 sq;
@@ -165,6 +166,7 @@ static void calculate_bishop_xrays(board_t* board, const side_color_t s)
 
 		pieces ^= (1ULL << sq);
 	}
+#endif
 
 	/* battery - 2 diagonal pieces with the same target */
 	/* discovered attack - */

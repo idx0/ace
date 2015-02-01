@@ -30,7 +30,7 @@ extern "C" {
 
 #if defined (__GNUC__)
   /* GCC or Equivalent */
-# define __inline inline
+# define __inline __inline__
 # define ALIGN64 __attribute__((aligned(8)))
 # define ALIGN32 __attribute__((aligned(4)))
 # define FORCE_INLINE __attribute__((always_inline))

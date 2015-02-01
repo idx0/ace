@@ -264,6 +264,9 @@ extern void pgn_new_game(pgn_t* pgn);
 /* test function */
 extern void pgn_test();
 
+extern void print_game(undolist_t *ul);
+extern void pgntree_print(pgn_tree_t* tree, game_t* game);
+
 #ifdef __cplusplus
 }
 #endif

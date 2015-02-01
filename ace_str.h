@@ -18,7 +18,7 @@ static void str_rtrim_ex(char* sz, const char* pattern);
 #define str_rtrim(sz) (str_rtrim_ex((sz), WHITESPACE))
 
 /* returns 1 if sz contains ch, 0 otherwise */
-__inline int str_contains(const char* sz, char ch)
+static __inline int str_contains(const char* sz, char ch)
 {
 	while (*sz) {
 		if (*sz == ch) return 1;
