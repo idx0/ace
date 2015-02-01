@@ -7,6 +7,7 @@ OBJS := \
 	ace_display.o \
 	ace_init.o \
 	ace_const.o \
+	ace_columns.o \
 	ace_zobrist.o \
 	ace_magic.o \
 	ace_move.o \

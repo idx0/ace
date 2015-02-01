@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "ace_columns.h"
 
@@ -139,7 +140,7 @@ void table_set_key(table_t* table, u16 row, column_string name)
 	if (!table) return;
 	if (table->nrows < row) return;
 
-	align_in(&table->keys.columns[row], ALIGN_LEFT, name, column_len(name));
+	align_in(table->keys.columns[row], ALIGN_LEFT, name, column_len(name));
 }
 
 void table_print(table_t* table)

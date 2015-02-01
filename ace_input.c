@@ -563,8 +563,11 @@ static void process_ls(app_t *app)
     printf("\n");
 }
 
-
+#ifdef ACE_LINUX
+#define PGN_DB "/home/steve/chess/gms/Kasparov.pgn"
+#else
 #define PGN_DB "F:\\Games\\Kasparov.pgn"
+#endif
 
 static int process_ace_command(app_t *app, char *sz, size_t len)
 {
@@ -624,7 +627,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
 					printf("\nillegal move detected [%d]\n", tmp);
 					break;
 				case PGN_ERROR_BADPTR:
-					printf("\ninvalid pointer[%d]\n", tmp);
+					printf("\ninvalid pointer [%d]\n", tmp);
 					break;
 				default:
 					pgntree_add(&app->pgn.tree, &app->pgn.game);

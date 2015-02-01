@@ -26,6 +26,7 @@
 
 #include <stdarg.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "ace_pgn.h"
 #include "ace_columns.h"
@@ -1467,8 +1468,8 @@ void pgntree_print(pgn_tree_t* tree, game_t* game)
 	} else {
 		child = parent->eldest;
 
-		tdi = (u16*)malloc(parent->sat.nchild * sizeof(float));
-		tdf = (u16*)malloc(parent->sat.nchild * sizeof(float));
+		tdi = (float*)malloc(parent->sat.nchild * sizeof(float));
+		tdf = (float*)malloc(parent->sat.nchild * sizeof(float));
 		i = 0;
 
 		table = table_create(parent->sat.nchild, 2);
