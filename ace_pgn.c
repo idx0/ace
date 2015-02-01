@@ -24,6 +24,8 @@
  * Shane Hudson (sgh@users.sourceforge.net)
  */
 
+#include <stdarg.h>
+
 #include "ace_pgn.h"
 
 #include "ace_intrin.h"
@@ -784,6 +786,18 @@ static pgn_token_t game_token(pgn_buffer_t* buffer, char* outbuf, u16 outlen)
 
 #define PARSE_MOVE_BUFLEN 255
 
+static int return_error(const char* format, ...)
+{
+	va_list va;
+	va_start(va, format);
+
+	vprintf(format, va);
+
+	va_end(va);
+
+	return PGN_ERROR_MOVE;
+}
+
 static int pgn_parse_pawnmove(pgn_t *pgn, movelist_t* ml,
 							  char* buffer, u16 buflen, pgn_token_t hint)
 {
@@ -794,14 +808,15 @@ static int pgn_parse_pawnmove(pgn_t *pgn, movelist_t* ml,
 	board_rank_t tr;
 
 	if (hint == TOKEN_MOVE_PROMOTE) {
-		if (!ismaterial(buffer[buflen - 1])) return PGN_ERROR_MOVE;
+		if (!ismaterial(buffer[buflen - 1])) return return_error("unrecognized promotion: `%s'\n", buffer);
 
 		promo = piece_type(piece_from_char(toupper(buffer[buflen - 1])));
+
 		buflen--;
 
 		/* allow promotion notation both with and without '=' */
 		if (buffer[buflen - 1] == '=') { buflen--; }
-		if (buflen < 2) return PGN_ERROR_MOVE;
+		if (buflen < 2) return return_error("unrecognized promotion: `%s'\n", buffer);
 	} else {
 		/* check for coordinate notation (ie e2e4, etc.) */
 		if ((buflen >= 4) &&
@@ -812,7 +827,7 @@ static int pgn_parse_pawnmove(pgn_t *pgn, movelist_t* ml,
 	}
 
 	/* file */
-	if (!isfile(buffer[0])) return PGN_ERROR_MOVE;
+	if (!isfile(buffer[0])) return return_error("pawn start not file: `%s'\n", buffer);
 	ff = file_from_char(buffer[0]);
 
 	/* check for compact capture notation which omits rank */
@@ -825,7 +840,8 @@ static int pgn_parse_pawnmove(pgn_t *pgn, movelist_t* ml,
 			if ((is_capture(m)) &&
 				(file(move_from(m)) == ff) &&
 				(file(move_to(m)) == tf) &&
-				((promo == PAWN) || (is_promotion(m))) &&
+				((promo == PAWN) || 
+					((is_promotion(m)) && (((move_kind(m) & 0x03) + KNIGHT) == promo))) &&
 				(pgn->game.board->pos.pawns & (C64(1) << move_from(m)))) {
 				/* TODO: pgn_node_t */
 				do_move(pgn->game.board, &pgn->game.undo, m);
@@ -834,11 +850,11 @@ static int pgn_parse_pawnmove(pgn_t *pgn, movelist_t* ml,
 			}
 		}
 
-		return PGN_ERROR_MOVE;
+		return return_error("buffer is short capture, but move is illegal: `%s'\n", buffer);
 	}
 
 	if ((!isfile(buffer[buflen - 2])) || (!isrank(buffer[buflen - 1]))) {
-		return PGN_ERROR_MOVE;
+		return return_error("pawn move without destination: `%s'\n", buffer);
 	}
 
 	/* move should be in algebraic form now */
@@ -850,7 +866,8 @@ static int pgn_parse_pawnmove(pgn_t *pgn, movelist_t* ml,
 
 		if ((file(move_from(m)) == ff) &&
 			(move_to(m) == from_rank_file(tr, tf)) &&
-			((promo == PAWN) || (is_promotion(m))) &&
+			((promo == PAWN) || 
+				((is_promotion(m)) && (((move_kind(m) & 0x03) + KNIGHT) == promo))) &&
 			(pgn->game.board->pos.pawns & (C64(1) << move_from(m)))) {
 			/* TODO: pgn_node_t */
 			do_move(pgn->game.board, &pgn->game.undo, m);
@@ -859,7 +876,7 @@ static int pgn_parse_pawnmove(pgn_t *pgn, movelist_t* ml,
 		}
 	}
 
-	return PGN_ERROR_MOVE;
+	return return_error("invalid pawn notation: `%s'\n", buffer);
 }
 
 
@@ -876,10 +893,10 @@ static int pgn_parse_materialmove(pgn_t *pgn, movelist_t* ml,
 	p = piece_from_char(toupper(buffer[0]));
 	set_piece_color(p, pgn->game.board->side);
 
-	if (piece_type(p) == INVALID_TYPE) return PGN_ERROR_MOVE;
-	if ((buflen < 3) || (buflen > 5)) return PGN_ERROR_MOVE;
+	if (piece_type(p) == INVALID_TYPE) return return_error("piece type not recognized: `%s'\n", buffer);
+	if ((buflen < 3) || (buflen > 5)) return return_error("move length out-of-range: `%s'\n", buffer);
 	if ((!isfile(buffer[buflen - 2])) &&
-		(!isrank(buffer[buflen - 1]))) return PGN_ERROR_MOVE;
+		(!isrank(buffer[buflen - 1]))) return return_error("move without destination: `%s'\n", buffer);
 
 	to = from_rank_file(rank_from_char(buffer[buflen - 1]),
 						file_from_char(buffer[buflen - 2]));
@@ -906,14 +923,12 @@ static int pgn_parse_materialmove(pgn_t *pgn, movelist_t* ml,
 			(pgn->game.board->pos.squares[move_from(m)] == p) &&
 			((ff == INVALID_FILE) || (file(move_from(m)) == ff)) &&
 			((fr == INVALID_RANK) || (rank(move_from(m)) == fr))) {
-			/* TODO: pgn_node_t */
-			do_move(pgn->game.board, &pgn->game.undo, m);
 
-			return PGN_SUCCESS;
+			if (do_move(pgn->game.board, &pgn->game.undo, m) == TRUE) return PGN_SUCCESS;
 		}
 	}
 	
-	return PGN_ERROR_MOVE;
+	return return_error("invalid move notation: `%s'\n", buffer);
 }
 
 
@@ -952,7 +967,7 @@ static int pgn_parse_move(pgn_t *pgn, char* buffer, u16 buflen, pgn_token_t hint
 		s++;
 	}
 
-	if (len < 2) return PGN_ERROR_MOVE;
+	if (len < 2) return return_error("move length out-of-range: `%s'\n", buffer);
 
 	*p = 0;
 	s = buf;
@@ -982,7 +997,7 @@ static int pgn_parse_move(pgn_t *pgn, char* buffer, u16 buflen, pgn_token_t hint
 			}
 		}
 
-		return PGN_ERROR_MOVE;
+		return return_error("castle illegal: `%s'\n", buffer);
 	}
 
 	/* piece move */
@@ -990,7 +1005,7 @@ static int pgn_parse_move(pgn_t *pgn, char* buffer, u16 buflen, pgn_token_t hint
 		return pgn_parse_materialmove(pgn, &ml, buf, len);
 	}
 
-	return PGN_ERROR_MOVE;
+	return return_error("invalid move notation: `%s'\n", buffer);
 }
 
 
@@ -1447,7 +1462,10 @@ void pgntree_print(pgn_tree_t* tree, game_t* game)
 
 		while (child) {
 			write_move(game->board, child->sat.move, buffer, 128);
-			printf("%s (%d)\n", buffer, child->sat.count);
+			printf("%s (%d) (%1.3f)\n",
+				   buffer,
+				   child->sat.count,
+				   ((float)child->sat.points / 10.0f) / (float)child->sat.count);
 
 			child = child->sibling;
 		}
@@ -1525,6 +1543,8 @@ void pgn_test()
 	while (pgn_parse(&pgn) == PGN_SUCCESS) {
 		/* we can use our board for whatever */
 //		print_game(&pgn.game.undo);
+		printf(".");
+		fflush(stdout);
 
 		pgntree_add(&pgn.tree, &pgn.game);
 

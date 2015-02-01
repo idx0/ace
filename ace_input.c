@@ -564,7 +564,7 @@ static void process_ls(app_t *app)
 }
 
 
-#define PGN_DB "F:\\Games\\round1.pgn"
+#define PGN_DB "F:\\Games\\Finegold.pgn"
 
 static int process_ace_command(app_t *app, char *sz, size_t len)
 {
@@ -572,7 +572,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
     move_t m;
     char *ptr, *ctx = NULL;
     size_t cmdlen;
-    int tmp;
+    int tmp, rc;
 
     ptr = strtok2(sz, delim, &ctx);
 
@@ -613,11 +613,34 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
             process_ls(app);
         } else if (strncmp(ptr, "pgn", 3) == 0) {
 			pgn_open(&app->pgn, PGN_DB);
+			tmp = 0;
 
-			while (pgn_parse(&app->pgn) == PGN_SUCCESS) {
-				pgntree_add(&app->pgn.tree, &app->pgn.game);
+			while ((rc = pgn_parse(&app->pgn)) != PGN_ERROR_EOF) {
+				switch (rc) {
+				case PGN_ERROR_GAME:
+					printf("\invalid game parameter [%d]\n", tmp);
+					break;
+				case PGN_ERROR_MOVE:
+					printf("\nillegal move detected [%d]\n", tmp);
+					break;
+				case PGN_ERROR_BADPTR:
+					printf("\ninvalid pointer[%d]\n", tmp);
+					break;
+				default:
+					pgntree_add(&app->pgn.tree, &app->pgn.game);
+
+					printf(".");
+					fflush(stdout);
+					break;
+				}
+
+				if (rc == PGN_ERROR_MOVE) {
+					print_game(&app->pgn.game.undo);
+					break;
+				}
 
 				pgn_new_game(&app->pgn);
+				tmp++;
 			}
 
 //			pgn_close(&app->pgn);
