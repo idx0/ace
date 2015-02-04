@@ -29,7 +29,7 @@
 int main(int argc, char **argv)
 {
 	int i = 0, c;
-	char buf[256];
+	cmd_string_t* cmd = cmdstring_create(MAX_CMD_LEN);
 	app_t app;
 
 	init_zobrist(0xd4e12c77);
@@ -55,28 +55,30 @@ int main(int argc, char **argv)
 			default: break;
 		}
 
+		cmdstring_reset(cmd);
+
 		i = 0;
 		fflush(stdout);
-		while (i < 256) {
+		while (i < MAX_CMD_LEN) {
 			c = getchar();
 
 			if ((c == EOF) || (c == '\r') || (c == '\n')) {
-				buf[i] = 0;
 				break;
 			}
 
-			buf[i] = c;
+			cmdstring_add_to_buffer(cmd, c);
 			i++;
 		}
-		buf[i] = 0;
 
 		/* process_command */
-		if (!process_command(&app, buf, i)) {
-			fprintf(stderr, "ace: unrecognized command string `%s'\n", buf);
+		if (!process_command(&app, cmd)) {
+			/* fprintf(stderr, "ace: unrecognized command string `%s'\n", buf); */
 		}
 	}
 
 	destroy_app(&app);
+
+	cmdstring_destroy(cmd);
 
 	return 0;
 }

@@ -16,13 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ace_global.h"
-#include "ace_types.h"
-#include "ace_fen.h"
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "ace_global.h"
+#include "ace_types.h"
+#include "ace_fen.h"
+#include "ace_pgn.h"
 
 static void init_knights()
 {
@@ -388,6 +389,12 @@ void init_app(app_t *app)
 	app->search.flags |= SEARCH_STOPPED;
 	app->search.depth = 8;
 
+	/* allocate tree */
+	app->tree.root = pgnnode_alloc();
+
+	app->tree.count = 0;
+	app->tree.depth = 0;
+
 	/* 16 mb hash to start */
 	init_hash(&app->hash, 256);
 }
@@ -409,6 +416,10 @@ void init_startpos(app_t *app)
 void destroy_app(app_t *app)
 {
 	assert(app);
+
+	free(app->tree.root);
+	app->tree.count = 0;
+	app->tree.depth = 0;
 
 	free(app->game.board);
 	xfree(app->hash.record);

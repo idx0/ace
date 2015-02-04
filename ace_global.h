@@ -28,6 +28,7 @@ typedef struct ace_app
 	game_t game;
 	/* the pgn library for the current application */
 	pgn_t pgn;
+	pgn_tree_t tree;
 	/* true if the application should quit */
 	int quit;
 	/* the current input mode */
@@ -151,6 +152,37 @@ u64* ray_list[8];
 #define inner_squares 0x007e7e7e7e7e7e00
 
 extern void test();
+
+#define MAX_CMD_LEN 	1024
+
+/** command string code */
+typedef struct _cmd_string
+{
+	char* buffer;
+	u16 count;
+	u16 length;
+	u16 pos;
+} cmd_string_t;
+
+
+cmd_string_t* cmdstring_create(u16 len);
+void cmdstring_destroy(cmd_string_t* buffer);
+
+void cmdstring_reset(cmd_string_t* buffer);
+
+void cmdstring_add_to_buffer(cmd_string_t* buffer, char c);
+
+/**
+ * Copies at most outlen bytes from the next word contained in buffer to out.
+ * Words are delimited by any whitespace character.  Pairs of single (') or
+ * double (") quotes can be used to group words together into strings.  Any
+ * type of character can be escaped with a backslash (\) to be interpreted
+ * literally (although certain escape strings \r, \n, etc. are interpreted as
+ * expected).  The number of bytes in the current word is returned.  A return
+ * value of zero implies no words remain in the buffer.
+ */
+int cmdstring_next_word(cmd_string_t* buffer, char* out, u16 outlen);
+
 
 /**
  * Initializes the precomputed movelist arrays
@@ -307,7 +339,7 @@ extern int process_moves(board_t *board, undolist_t *ul, char *sz,
  * @param len The length of the input string
  * @return TRUE if quit, FALSE otherwise
  */
-extern int command_quit(const char *sz, size_t len);
+extern int command_quit(cmd_string_t* cmdbuf);
 
 /**
  * Processes a command from the given string
@@ -316,7 +348,7 @@ extern int command_quit(const char *sz, size_t len);
  * @param len The length of the input string
  * @return TRUE if the command was processed succesfully, FALSE otherwise
  */
-extern int process_command(app_t *app, char *sz, size_t len);
+extern int process_command(app_t *app, cmd_string_t* cmdbuf);
 
 /**
  * OS inpendent function which returns true if input is ready to be read from

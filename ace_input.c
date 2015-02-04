@@ -17,6 +17,7 @@
  */
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include "ace_types.h"
@@ -25,6 +26,112 @@
 #include "ace_display.h"
 #include "ace_pgn.h"
 #include "ace_str.h"
+
+/******************************************************************************/
+
+cmd_string_t* cmdstring_create(u16 len)
+{
+    cmd_string_t* buffer = (cmd_string_t*)malloc(sizeof(cmd_string_t));
+
+    if (buffer) {
+        buffer->buffer = (char*)malloc(len);
+        buffer->count = len;
+        buffer->length = 0;
+        buffer->pos = 0;
+
+        buffer->buffer[0] = 0;
+    }
+
+    return buffer;
+}
+
+
+void cmdstring_destroy(cmd_string_t* buffer)
+{
+    if (buffer) {
+        free (buffer->buffer);
+    }
+
+    free(buffer);
+}
+
+
+void cmdstring_add_to_buffer(cmd_string_t* buffer, char c)
+{
+    if (buffer) {
+        if (buffer->length < buffer->count) {
+            buffer->buffer[buffer->length++] = c;
+        }
+
+        buffer->buffer[buffer->length] = 0;
+    }
+}
+
+
+void cmdstring_reset(cmd_string_t* buffer)
+{
+    if (buffer) {
+        buffer->length = 0;
+        buffer->pos = 0;
+        buffer->buffer[0] = 0;
+    }
+}
+
+
+int cmdstring_next_word(cmd_string_t* buffer, char* out, u16 outlen)
+{
+    u16 i = 0;
+    u16 inq = 0, indq = 0;
+    u16 esc = 0;
+    char c;
+
+    if (!buffer) return 0;
+    if (buffer->pos >= buffer->length) return 0;
+    if (buffer->pos >= buffer->count) return 0;
+
+    /* move past spaces */
+    while (isspace(buffer->buffer[buffer->pos])) {
+        buffer->pos++;
+    }
+
+    /* copy chars */
+    do {
+        c = buffer->buffer[buffer->pos++];
+
+        if (c == 0) {
+            break;
+        } else if (esc == 1) {
+            esc = 0;
+            switch (c) {
+            case 'n': out[i++] = '\n'; break;
+            case 't': out[i++] = '\t'; break;
+            case 'r': out[i++] = '\r'; break;
+            case 'b': out[i++] = '\b'; break;
+            case 'f': out[i++] = '\f'; break;
+            case 'v': out[i++] = '\v'; break;
+            default:
+                 out[i++] = c;
+                 break;
+            }
+        } else if ((indq == 0) && (inq == 0) && (isspace(c))) {
+            break;
+        } else if (c == '\\') {
+            esc = 1;
+        } else if (c == '\'') {
+            inq = !inq;
+        } else if (c == '"') {
+            indq = !indq;
+        } else {
+            out[i++] = c;
+        }
+    } while ((i < outlen) && (buffer->pos < buffer->length));
+
+    out[i] = 0;
+
+    return i;
+}
+
+/******************************************************************************/
 
 static piece_type_t process_piece_type(char c)
 {
@@ -69,15 +176,18 @@ static u8 get_source_sq(const board_t* board, const movelist_t* ml,
 }
 
 
-int command_quit(const char *sz, size_t len)
+int command_quit(cmd_string_t* cmdbuf)
 {
     static const char cmd_quit[] = "quit";
     static const char cmd_exit[] = "exit";
 
+    char out[MAX_CMD_LEN];
+    u16 len = cmdstring_next_word(cmdbuf, out, MAX_CMD_LEN);
+
     if (len >= 4) {
-        if (strncmp(sz, cmd_quit, 4) == 0) {
+        if (strncmp(out, cmd_quit, 4) == 0) {
             return TRUE;
-        } else if (strncmp(sz, cmd_exit, 4) == 0) {
+        } else if (strncmp(out, cmd_exit, 4) == 0) {
             return TRUE;
         }
     }
@@ -470,12 +580,15 @@ void checkup(app_t *app)
 }
 
 
-static int command_done(const char *sz, size_t len)
+static int command_done(cmd_string_t* cmdbuf)
 {
     static const char cmd[] = "done";
+    char out[MAX_CMD_LEN];
+
+    u16 len = cmdstring_next_word(cmdbuf, out, MAX_CMD_LEN);
 
     if (len >= 4) {
-        if (strncmp(sz, cmd, 4) == 0) {
+        if (strncmp(out, cmd, 4) == 0) {
             return TRUE;
         }
     }
@@ -564,7 +677,7 @@ static void process_ls(app_t *app)
 }
 
 #ifdef ACE_LINUX
-#define PGN_DB "/home/steve/chess/gms/Kasparov.pgn"
+#define PGN_DB "pgn/eco.pgn"
 #else
 #define PGN_DB "F:\\Games\\Kasparov.pgn"
 #endif
@@ -630,7 +743,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
 					printf("\ninvalid pointer [%d]\n", tmp);
 					break;
 				default:
-					pgntree_add(&app->pgn.tree, &app->pgn.game);
+					pgntree_add(&app->tree, &app->pgn.game);
 
 					printf(".");
 					fflush(stdout);
@@ -648,7 +761,7 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
 
 //			pgn_close(&app->pgn);
 		} else if (strncmp(ptr, "tree", 4) == 0) {
-			pgntree_print(&app->pgn.tree, &app->game);
+			pgntree_print(&app->tree, &app->game);
 		} else if (strncmp(ptr, "info", 4) == 0) {
             return command_info(app, &ctx);
         } else if (strncmp(ptr, "help", 4) == 0) {
@@ -668,17 +781,20 @@ static int process_ace_command(app_t *app, char *sz, size_t len)
 }
 
 
-int process_command(app_t *app, char *sz, size_t len)
+int process_command(app_t *app, cmd_string_t* cmdbuf)
 {
     fen_state_t fen;
+    
+    char *sz = cmdbuf->buffer;
+    u16 len = cmdbuf->length;
 
     assert(app);
 
     /* check for quit first */
-    if (command_quit(sz, len)) {
+    if (command_quit(cmdbuf)) {
         app->quit = TRUE;
     /* check for 'done' which takes the user out of the current mode */
-    } else if (command_done(sz, len)) {
+    } else if (command_done(cmdbuf)) {
         app->mode = IACE;
     } else {
         switch (app->mode)

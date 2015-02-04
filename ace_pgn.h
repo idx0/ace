@@ -75,6 +75,10 @@ typedef struct _pgn_node
 
 } pgn_node_t;
 
+extern pgn_node_t* pgnnode_alloc();
+extern void pgnnode_free(pgn_node_t* node);
+
+
 #ifdef INCLUDE_ELO
 #define NODE_LEN 18
 #else
@@ -212,7 +216,6 @@ typedef enum _pgn_parsing
 
 typedef struct _pgn
 {
-	pgn_tree_t tree;
 	pgn_buffer_t* buffer;
 
 	game_t game;

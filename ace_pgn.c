@@ -412,6 +412,27 @@ static u16 pgn_word_alpha(pgn_buffer_t* buffer, char* outbuf, u16 remaining)
 	return cnt;
 }
 
+/* rest of comment */
+static u16 pgn_comment(pgn_buffer_t* buffer, char* outbuf, u16 remaining)
+{
+	u16 cnt = 0;
+	char ch = pgn_buffer_get(buffer);
+
+	while ((ch != '}') &&
+		   (ch != EOF) && (ch != 0)) {
+
+		if (cnt < remaining) {
+			outbuf[cnt++] = ch;
+		}
+
+		ch = pgn_buffer_get(buffer);
+	}
+
+	outbuf[cnt] = 0;
+
+	return cnt;
+}
+
 /*****************************************************************************/
 
 static pgn_token_t game_token_digit(char *buffer, u16 buflen)
@@ -1086,11 +1107,6 @@ int pgn_open(pgn_t* pgn, const char* filename)
 
 	pgn->buffer = pgn_buffer_new_file(filename);
 	pgn->state = PARSE_GARBAGE;
-	
-	pgn->tree.root = pgnnode_alloc();
-
-	pgn->tree.count = 0;
-	pgn->tree.depth = 0;
 
 	pgn->game.board = (board_t*)malloc(sizeof(board_t));
 
@@ -1115,10 +1131,6 @@ void pgn_close(pgn_t* pgn)
 	if (pgn) {
 		pgn_buffer_free(pgn->buffer);
 		pgn->state = PARSE_GARBAGE;
-
-		free(pgn->tree.root);
-		pgn->tree.count = 0;
-		pgn->tree.depth = 0;
 
 		free(pgn->game.board);
 		pgn->game.undo.count = 0;
@@ -1146,6 +1158,23 @@ int pgn_parse_moves(pgn_t* pgn, char* buffer, u32 buflen)
 			rc = pgn_parse_move(pgn, buffer, buflen, token);
 
 			/* we can do some things here if we aren't set to strict castling */
+			break;
+		case TOKEN_IGNORE:
+		case TOKEN_MOVENUM:
+		case TOKEN_CHECK:
+		case TOKEN_MATE:
+			/* ignore */
+			break;
+		case TOKEN_COMMENT:
+			pgn_comment(pgn->buffer, buffer, buflen);
+			break;
+		case TOKEN_NAG:
+		case TOKEN_SUFFIX:
+		case TOKEN_LINECOMMENT:
+		case TOKEN_VARSTART:
+		case TOKEN_VAREND:
+		case TOKEN_COMMENTEND:
+			/* TODO */
 			break;
 		default: break;
 		}
@@ -1578,7 +1607,7 @@ void pgn_test()
 		printf(".");
 		fflush(stdout);
 
-		pgntree_add(&pgn.tree, &pgn.game);
+//		pgntree_add(&pgn.tree, &pgn.game);
 
 		pgn_new_game(&pgn);
 	}
