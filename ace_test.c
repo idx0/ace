@@ -63,7 +63,7 @@ void test()
 		xray[BLACK][BLACK] = xray[BLACK][WHITE];
 
 		/* print blocked movement */
-		print_bboard2(xray[WHITE], xray[BLACK]);
+		print_bboard2(xray[WHITE][WHITE], xray[BLACK][WHITE]);
 
 		xray[WHITE][WHITE] &= ~blks[WHITE] & board.pos.occ[WHITE];
 		xray[WHITE][BLACK] &= ~blks[BLACK] & board.pos.occ[BLACK];

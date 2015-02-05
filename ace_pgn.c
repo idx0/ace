@@ -128,6 +128,17 @@ static void pgnnode_write_dfs(FILE *fp, pgn_node_t* node)
 	}
 }
 
+static pgn_node_t* pgnnode_child(pgn_node_t* parent)
+{
+	pgn_node_t* child = pgnnode_alloc();
+
+	if ((parent) && (child)) {
+		child->parent = parent;
+		child->ply = parent->ply + 1;
+	}
+
+	return child;
+}
 
 void pgntree_write_dfs(pgn_tree_t* tree, const char *filename)
 {

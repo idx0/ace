@@ -59,7 +59,7 @@ int parse_uci_position(app_t *app, char **ctx)
 {
 	fen_state_t fen;
 	char fenbuf[256], *ptr;
-	int fenlen = 0, j;
+	u16 fenlen = 0, j;
 	size_t cmdlen;
 	enum { CMDMODE, FENMODE, MOVEMODE } mode;
 
